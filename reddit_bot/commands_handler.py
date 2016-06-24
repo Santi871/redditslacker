@@ -195,7 +195,7 @@ class CommandsHandler:
 
         plt.clf()
 
-        response = {}
+        response = dict()
         response['response_type'] = "in_channel"
         response['attachments'] = [{}]
         response['attachments'][0]['fields'] = [{}, {}]
