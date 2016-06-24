@@ -24,6 +24,7 @@ sdist/
 var/
 *.egg-info/
 .installed.cfg
+/webapp/oauth.ini
 *.egg
 
 # PyInstaller
