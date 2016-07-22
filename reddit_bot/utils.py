@@ -1,9 +1,13 @@
+import json
+
+
 class SlackButton:
 
-    def __init__(self, text, value=None):
+    def __init__(self, text, value=None, style="default"):
         self.button_dict = dict()
         self.button_dict['text'] = text
         self.button_dict['name'] = text
+        self.button_dict['style'] = style
         if value is None:
             self.button_dict['value'] = text
         else:
@@ -22,18 +26,25 @@ class SlackField:
 
 class SlackResponse:
 
-    def __init__(self, text=None, response_type="in_channel"):
+    def __init__(self, token=None, channel=None, text=None, response_type="in_channel"):
         self.response_dict = dict()
+        self.token = token
 
         if text is not None:
             self.response_dict['text'] = text
-        self.response_dict['response_type'] = response_type
+
+        if token is None:
+            self.response_dict['response_type'] = response_type
+
+        if token is not None:
+            self.response_dict['token'] = token
+            self.response_dict['as_user'] = 'false'
+            self.response_dict['channel'] = channel
 
     def add_attachment(self, title=None, text=None, fallback=None, callback_id=None, color=None, title_link=None,
                        image_url=None, fields=None, buttons=None):
 
         attachment_dict = dict()
-        attachment_dict['attachment_type'] = "default"
 
         if fallback is not None:
             attachment_dict['fallback'] = fallback
@@ -66,7 +77,13 @@ class SlackResponse:
 
             attachment_dict['actions'] = buttons_list
 
-        if "attachments" not in self.response_dict:
+        if "attachments" not in self.response_dict and self.token is not None:
+            self.response_dict['attachments'] = json.dumps([attachment_dict])
+        elif "attachments" in self.response_dict and self.token is not None:
+            self.response_dict['attachments'].append(json.dumps(attachment_dict))
+        elif "attachments" not in self.response_dict and self.token is None:
             self.response_dict['attachments'] = [attachment_dict]
-        else:
+        elif "attachments" in self.response_dict and self.token is None:
             self.response_dict['attachments'].append(attachment_dict)
+
+

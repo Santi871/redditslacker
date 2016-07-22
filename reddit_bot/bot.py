@@ -9,10 +9,11 @@ import numpy as np
 import datetime
 import os
 import requests
-from reddit_bot.utils import SlackResponse, SlackField
+from reddit_bot.utils import SlackResponse, SlackField, SlackButton
 import threading
 import traceback
 import time
+import json
 
 SLACK_BOT_TOKEN = tokens.get_token('SLACK_BOT_TOKEN')
 
@@ -28,14 +29,13 @@ class CreateThread(threading.Thread):
     def run(self):
 
         # This loop will run when the thread raises an exception
-        while True:
-            try:
-                print("Starting " + self.name)
-                methodToRun = self.method(self.obj)
-            except:
-                print("*Unhandled exception"
-                      " in thread* '%s'." % self.name)
-                print(traceback.format_exc())
+        try:
+            print("Starting " + self.name)
+            methodToRun = self.method(self.obj)
+        except:
+            print("*Unhandled exception"
+                  " in thread* '%s'." % self.name)
+            print(traceback.format_exc())
 
 
 def own_thread(func):
@@ -75,7 +75,17 @@ class RedditBot:
     @own_thread
     def new_comments_stream(self):
         for comment in praw.helpers.comment_stream(self.r, 'explainlikeimfive', limit=2, verbosity=0):
-            print(comment.body)
+            if comment.is_root and comment.author.name != "ELI5_BotMod":
+                field_a = SlackField("Author", comment.author.name)
+                field_b = SlackField("Question", comment.submission.title)
+                field_c = SlackField("Permalink", comment.permalink)
+                remove_button = SlackButton("Remove", "remove_" + comment.id, style="danger")
+                response = SlackResponse(token=SLACK_BOT_TOKEN, channel="#tlc-feed")
+                response.add_attachment(text=comment.body, fields=[field_b, field_a], buttons=[remove_button],
+                                        color="#0073a3", title_link=comment.permalink)
+
+                request_response = requests.post('https://slack.com/api/chat.postMessage',
+                                                 params=response.response_dict)
 
     def summary(self, split_text=None, limit=500, username=None):
 
