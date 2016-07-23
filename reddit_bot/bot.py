@@ -74,18 +74,21 @@ class RedditBot:
 
     @own_thread
     def new_comments_stream(self):
-        for comment in praw.helpers.comment_stream(self.r, 'explainlikeimfive', limit=2, verbosity=0):
-            if comment.is_root and comment.author.name != "ELI5_BotMod":
-                field_a = SlackField("Author", comment.author.name)
-                field_b = SlackField("Question", comment.submission.title)
-                field_c = SlackField("Permalink", comment.permalink)
-                remove_button = SlackButton("Remove", "remove_" + comment.id, style="danger")
-                response = SlackResponse(token=SLACK_BOT_TOKEN, channel="#tlc-feed")
-                response.add_attachment(text=comment.body, fields=[field_b, field_a], buttons=[remove_button],
-                                        color="#0073a3", title_link=comment.permalink)
 
-                request_response = requests.post('https://slack.com/api/chat.postMessage',
-                                                 params=response.response_dict)
+        while True:
+            try:
+                for comment in praw.helpers.comment_stream(self.r, 'explainlikeimfive', limit=2, verbosity=0):
+                    if comment.is_root and comment.author.name != "ELI5_BotMod":
+                        field_a = SlackField("Author", comment.author.name)
+                        field_b = SlackField("Question", comment.submission.title)
+                        remove_button = SlackButton("Remove", "remove_" + comment.id, style="danger")
+                        response = SlackResponse(token=SLACK_BOT_TOKEN, channel="#tlc-feed")
+                        response.add_attachment(text=comment.body, fields=[field_b, field_a], buttons=[remove_button],
+                                                color="#0073a3", title_link=comment.permalink)
+
+                        requests.post('https://slack.com/api/chat.postMessage', params=response.response_dict)
+            except requests.exceptions.ReadTimeout:
+                time.sleep(1)
 
     def summary(self, split_text=None, limit=500, username=None):
 
