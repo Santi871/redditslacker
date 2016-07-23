@@ -81,10 +81,15 @@ class RedditBot:
                     if comment.is_root and comment.author.name != "ELI5_BotMod":
                         field_a = SlackField("Author", comment.author.name)
                         field_b = SlackField("Question", comment.submission.title)
+                        approve_button = SlackButton("Approve", "approve_" + comment.id, style="primary")
                         remove_button = SlackButton("Remove", "remove_" + comment.id, style="danger")
                         response = SlackResponse(token=SLACK_BOT_TOKEN, channel="#tlc-feed")
-                        response.add_attachment(text=comment.body, fields=[field_b, field_a], buttons=[remove_button],
-                                                color="#0073a3", title_link=comment.permalink)
+                        response.add_attachment(text=comment.body, fallback="Unable to display attachment",
+                                                callback_id="tlc_comment",
+                                                fields=[field_a],
+                                                buttons=[approve_button, remove_button],
+                                                color="#0073a3", title=comment.submission.title,
+                                                title_link=comment.permalink)
 
                         requests.post('https://slack.com/api/chat.postMessage', params=response.response_dict)
             except requests.exceptions.ReadTimeout:
