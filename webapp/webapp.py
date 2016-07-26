@@ -43,6 +43,7 @@ def command():
 @app.route('/slack/action-endpoint', methods=['POST'])
 def button_response():
     # ADD CHECK INTERACTIONS TOKEN
+    print(str(dict(request.form)))
     args_dict = commands_handler_obj.find_button_request_args(dict(request.form))
     commands_handler_obj.thread_command_request(args_dict)
 

@@ -45,7 +45,7 @@ class CommandsHandler:
             button_b = SlackButton("1000")
             response = SlackResponse(text='How many comments to load?')
             response.add_attachment(fallback="You are unable to choose a number of comments to load.",
-                                    callback_id="summary_" + request.get('text'), color="#3AA3E3",
+                                    callback_id="summary", color="#3AA3E3",
                                     text="Have in mind loading 1000 comments takes a little longer.",
                                     buttons=[button_a, button_b])
 
