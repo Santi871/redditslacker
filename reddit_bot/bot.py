@@ -3,19 +3,16 @@ import OAuth2Util
 from praw.handlers import MultiprocessHandler
 from imgurpython import ImgurClient
 import matplotlib.pyplot as plt
-from tokens import tokens
 import math
 import numpy as np
 import datetime
 import os
 import requests
-from reddit_bot.utils import SlackResponse, SlackField, SlackButton
+from reddit_bot.utils import SlackResponse, SlackField, SlackButton, get_token
 import threading
 import traceback
-import time
-import json
 
-SLACK_BOT_TOKEN = tokens.get_token('SLACK_BOT_TOKEN')
+SLACK_BOT_TOKEN = get_token('SLACK_BOT_TOKEN')
 
 
 class CreateThread(threading.Thread):
@@ -49,18 +46,19 @@ def own_thread(func):
 
 class RedditBot:
 
-    def __init__(self):
+    def __init__(self, load_side_threads=True):
         handler = MultiprocessHandler()
         self.r = praw.Reddit(user_agent="windows:RedditSlacker 0.1 by /u/santi871", handler=handler)
-        self.imgur = ImgurClient(tokens.get_token('IMGUR_CLIENT_ID'), tokens.get_token('IMGUR_CLIENT_SECRET'))
+        self.imgur = ImgurClient(get_token('IMGUR_CLIENT_ID'), get_token('IMGUR_CLIENT_SECRET'))
 
         try:
             self._authenticate()
         except AssertionError:
-            pass
+            print("Bot authentication failed.")
 
         # self.hello()
-        self.new_comments_stream()
+        if load_side_threads:
+            self.new_comments_stream()
 
     def _authenticate(self):
         o = OAuth2Util.OAuth2Util(self.r)
@@ -78,7 +76,6 @@ class RedditBot:
             if comment.is_root and comment.author.name != "ELI5_BotMod":
                 field_a = SlackField("Author", comment.author.name)
                 field_b = SlackField("Question", comment.submission.title)
-                field_c = SlackField("Permalink", comment.permalink)
                 remove_button = SlackButton("Remove", "remove_" + comment.id, style="danger")
                 response = SlackResponse(token=SLACK_BOT_TOKEN, channel="#tlc-feed")
                 response.add_attachment(text=comment.body, fields=[field_b, field_a], buttons=[remove_button],

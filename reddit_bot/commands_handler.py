@@ -1,15 +1,17 @@
 import requests
 import json
-from reddit_bot import bot_threading, bot
+from reddit_bot import bot_threading
+from reddit_bot.bot import RedditBot
 from reddit_bot.utils import SlackResponse, SlackButton
 
 
 class CommandsHandler:
 
     def __init__(self):
-        self.reddit_bot = bot.RedditBot()
+        self.reddit_bot = RedditBot()
 
     def thread_command_request(self, request):
+        # Refactor into a decorator
 
         thread = bot_threading.CreateThread(1, str(self.handle_command_request) + " thread",
                                             self.handle_command_request, request)

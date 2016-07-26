@@ -1,4 +1,13 @@
 import json
+import configparser
+
+
+def get_token(token_name, config_name='tokens.ini'):
+
+    config = configparser.ConfigParser()
+    config.read(config_name)
+    token = config.get('tokens', token_name)
+    return token
 
 
 class SlackButton:
@@ -77,13 +86,12 @@ class SlackResponse:
 
             attachment_dict['actions'] = buttons_list
 
-        if "attachments" not in self.response_dict and self.token is not None:
-            self.response_dict['attachments'] = json.dumps([attachment_dict])
-        elif "attachments" in self.response_dict and self.token is not None:
-            self.response_dict['attachments'].append(json.dumps(attachment_dict))
-        elif "attachments" not in self.response_dict and self.token is None:
+        if self.token is not None:
+            attachment_dict = json.dumps(attachment_dict)
+
+        if "attachments" not in self.response_dict:
             self.response_dict['attachments'] = [attachment_dict]
-        elif "attachments" in self.response_dict and self.token is None:
+        else:
             self.response_dict['attachments'].append(attachment_dict)
 
 

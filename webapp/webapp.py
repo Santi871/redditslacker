@@ -1,14 +1,13 @@
 from flask import Flask, request, Response
-from reddit_bot import commands_handler
-from tokens import tokens
+from reddit_bot import commands_handler, utils
 import requests
 import os
 import json
 
-SLACK_SLASHCMDS_SECRET = tokens.get_token("SLACK_SLASHCMDS_SECRET")
-APP_SECRET_KEY = tokens.get_token("FLASK_APP_SECRET_KEY")
-SLACK_APP_ID = tokens.get_token("SLACK_APP_ID")
-SLACK_APP_SECRET = tokens.get_token("SLACK_APP_SECRET")
+SLACK_SLASHCMDS_SECRET = utils.get_token("SLACK_SLASHCMDS_SECRET")
+APP_SECRET_KEY = utils.get_token("FLASK_APP_SECRET_KEY")
+SLACK_APP_ID = utils.get_token("SLACK_APP_ID")
+SLACK_APP_SECRET = utils.get_token("SLACK_APP_SECRET")
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = '1'
 os.environ["OAUTHLIB_RELAX_TOKEN_SCOPE"] = '1'
 
@@ -50,4 +49,4 @@ def button_response():
     return "Processing your request... please allow a few seconds."
 
 if __name__ == '__main__':
-    app.run()
+    app.run(host='0.0.0.0')

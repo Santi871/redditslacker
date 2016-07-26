@@ -1,8 +1,4 @@
 import threading
-import time
-import traceback
-import OAuth2Util
-import praw
 
 
 class CreateThread(threading.Thread):
