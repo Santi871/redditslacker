@@ -1,4 +1,5 @@
-from flask import Flask, request, Response
+from flask import Flask, request, Response, redirect
+from flask_sslify import SSLify
 from reddit_bot import commands_handler, utils
 import requests
 import os
@@ -12,6 +13,7 @@ os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = '1'
 os.environ["OAUTHLIB_RELAX_TOKEN_SCOPE"] = '1'
 
 app = Flask(__name__, static_url_path='')
+sslify = SSLify(app)
 app.secret_key = APP_SECRET_KEY
 commands_handler_obj = commands_handler.CommandsHandler()
 
@@ -56,4 +58,4 @@ def button_response():
 
 if __name__ == '__main__':
     context = ('santihub.crt', 'santihub.key')
-    app.run(host='0.0.0.0', ssl_context=context, debug=True, threaded=True)
+    app.run(host='0.0.0.0', ssl_context=context, threaded=True)

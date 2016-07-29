@@ -8,7 +8,7 @@ from reddit_bot.utils import SlackResponse, SlackButton
 class CommandsHandler:
 
     def __init__(self):
-        self.reddit_bot = RedditBot()
+        self.reddit_bot = RedditBot(load_side_threads=False)
 
     def thread_command_request(self, request):
         # Refactor into a decorator
