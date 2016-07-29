@@ -120,7 +120,14 @@ class RedditBot:
                                   'SRSsucks', 'drama', 'undelete', 'blackout2015', 'oppression0', 'kotakuinaction',
                                   'tumblrinaction', 'offensivespeech', 'bixnood')
         total_negative_karma = 0
-        user = self.r.get_redditor(username)
+
+        try:
+            user = self.r.get_redditor(username, fetch=True)
+        except praw.errors.NotFound:
+            response = utils.SlackResponse()
+            response.add_attachment(fallback="Summary error.", title="Error: user not found.", color='danger')
+            return response.response_dict
+
         x = []
         y = []
         s = []
