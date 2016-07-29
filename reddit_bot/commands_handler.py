@@ -20,22 +20,26 @@ class CommandsHandler:
     def handle_command_request(self, request):
 
         response_url = request.get('response_url')
-        if str(type(request)) == "<class 'werkzeug.datastructures.ImmutableMultiDict'>":
-            command = request.get('command')[1:]
-            payload = getattr(self.reddit_bot, command)(split_text=request.get('text').split(),
-                                                        author=request.get('user_name'))
-        else:
-            command = request.get('command')
-            username = request.get('target_user')
-            limit = int(request.get('limit'))
-            payload = getattr(self.reddit_bot, command)(limit=limit, username=username)
+        try:
+            if str(type(request)) == "<class 'werkzeug.datastructures.ImmutableMultiDict'>":
+                command = request.get('command')[1:]
+                payload = getattr(self.reddit_bot, command)(split_text=request.get('text').split(),
+                                                            author=request.get('user_name'))
+            else:
+                command = request.get('command')
+                username = request.get('target_user')
+                limit = int(request.get('limit'))
+                payload = getattr(self.reddit_bot, command)(limit=limit, username=username)
 
-        print(str(payload))
+            print(str(payload))
 
-        response = requests.post(response_url, data=json.dumps(payload), headers={'content-type': 'application/json'})
-        print(str(response))
+            response = requests.post(response_url, data=json.dumps(payload), headers={'content-type': 'application/json'})
+            print(str(response))
 
-        return response
+            return response
+        except Exception as e:
+            print("-----------------------\nUnexpected exception\n-----------------------")
+            print(e)
 
     @staticmethod
     def define_command_response(request):
