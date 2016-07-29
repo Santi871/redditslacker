@@ -1,5 +1,5 @@
 import sys
-sys.path.append(0, "/home/pi/redditslacker/reddit_bot")
+sys.path.insert(0, "/home/pi/redditslacker/reddit_bot")
 
 from flask import Flask, request, Response, redirect
 from flask_sslify import SSLify
