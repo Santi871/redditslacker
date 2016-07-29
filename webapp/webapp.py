@@ -1,3 +1,6 @@
+import sys
+sys.path.append(0, "/home/pi/redditslacker/reddit_bot")
+
 from flask import Flask, request, Response, redirect
 from flask_sslify import SSLify
 import reddit_bot.commands_handler as commands_handler
@@ -5,11 +8,6 @@ import reddit_bot.utils as utils
 import requests
 import os
 import json
-import sys
-
-print(sys.path)
-sys.path.append("/home/pi/redditslacker/reddit_bot")
-print(sys.path)
 
 SLACK_SLASHCMDS_SECRET = utils.get_token("SLACK_SLASHCMDS_SECRET")
 APP_SECRET_KEY = utils.get_token("FLASK_APP_SECRET_KEY")
