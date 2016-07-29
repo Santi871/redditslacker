@@ -33,6 +33,7 @@ class CommandsHandler:
         print(str(payload))
 
         response = requests.post(response_url, data=json.dumps(payload), headers={'content-type': 'application/json'})
+        print(str(response))
 
         return response
 

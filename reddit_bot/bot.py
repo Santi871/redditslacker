@@ -53,6 +53,12 @@ class RedditBot:
         handler = MultiprocessHandler()
         self.r = praw.Reddit(user_agent="windows:RedditSlacker 0.1 by /u/santi871", handler=handler)
         self.imgur = ImgurClient(get_token('IMGUR_CLIENT_ID'), get_token('IMGUR_CLIENT_SECRET'))
+
+        try:
+            self._authenticate()
+        except AssertionError:
+            print("Bot authentication failed.")
+
         self.subreddit_name = 'explainlikeimfive'
         self.un = puni.UserNotes(self.r, self.r.get_subreddit(self.subreddit_name))
 
@@ -61,11 +67,6 @@ class RedditBot:
                               'snewzie', 'teaearlgraycold', 'thom.willard', 'yarr', 'cow_co', 'sterlingphoenix',
                               'hugepilchard', 'curmudgy', 'h2g2_researcher', 'jim777ps3', 'letstrythisagain_',
                               'mr_magnus', 'terrorpaw', 'kodack10', 'doc_daneeka')
-
-        try:
-            self._authenticate()
-        except AssertionError:
-            print("Bot authentication failed.")
 
         # self.hello()
         if load_side_threads:
@@ -273,7 +274,7 @@ class RedditBot:
         """*!shadowban [user] [reason]:* Shadowbans [user] and adds usernote [reason] - USERNAME IS CASE SENSITIVE!"""
 
         r = self.r
-        response = SlackResponse('Usage: !shadowban [username] [reason]')
+        response = SlackResponse(text='Usage: !shadowban [username] [reason]')
 
         if author in self.usergroup_mod:
 
@@ -288,7 +289,7 @@ class RedditBot:
                 reason = ' '.join(split_text[1:])
 
                 try:
-                    n = puni.Note(username, "Shadowbanned, reason: %s" % reason, split_text[0], '', 'botban')
+                    n = puni.Note(username, "Shadowbanned, reason: %s" % reason, username, '', 'botban')
 
                     replacement = ', "%s"]' % username
 
@@ -302,16 +303,17 @@ class RedditBot:
 
                     self.un.add_note(n)
 
-                    response = SlackResponse("User /u/%s has been shadowbanned" % username)
+                    response = SlackResponse(text="User */u/%s* has been shadowbanned." % username)
                     field_a = SlackField("Reason", reason)
+                    field_b = SlackField("Author", author)
                     response.add_attachment(fallback="Shadowbanned /u/" + username,
                                             title="User profile",
                                             title_link="https://www.reddit.com/user/" + username,
                                             color='good',
-                                            fields=[field_a])
+                                            fields=[field_a, field_b])
 
                 except:
-                    response = SlackResponse("Failed to shadowban user.")
+                    response = SlackResponse(text="Failed to shadowban user.")
                     response.add_attachment(fallback="Shadowban fail",
                                             title="Exception",
                                             text=traceback.format_exc(),
