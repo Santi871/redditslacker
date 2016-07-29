@@ -25,6 +25,8 @@ var/
 *.egg-info/
 .installed.cfg
 /webapp/oauth.ini
+/webapp/santihub.crt
+/webapp/santihub.key
 *.egg
 
 # PyInstaller
