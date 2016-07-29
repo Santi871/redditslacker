@@ -7,7 +7,9 @@ import os
 import json
 import sys
 
-sys.path.insert(0, "/home/pi/redditslacker/reddit_bot")
+print(sys.path)
+sys.path.append("/home/pi/redditslacker/reddit_bot")
+print(sys.path)
 
 SLACK_SLASHCMDS_SECRET = utils.get_token("SLACK_SLASHCMDS_SECRET")
 APP_SECRET_KEY = utils.get_token("FLASK_APP_SECRET_KEY")
