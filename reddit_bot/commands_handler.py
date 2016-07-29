@@ -22,7 +22,8 @@ class CommandsHandler:
         response_url = request.get('response_url')
         if str(type(request)) == "<class 'werkzeug.datastructures.ImmutableMultiDict'>":
             command = request.get('command')[1:]
-            payload = getattr(self.reddit_bot, command)(split_text=request.get('text').split())
+            payload = getattr(self.reddit_bot, command)(split_text=request.get('text').split(),
+                                                        author=request.get('user_name'))
         else:
             command = request.get('command')
             username = request.get('target_user')
@@ -49,7 +50,9 @@ class CommandsHandler:
                                     text="Have in mind loading 1000 comments takes a little longer.",
                                     buttons=[button_a, button_b])
 
-        return response.response_dict
+            response = response.response_dict
+
+        return response
 
     @staticmethod
     def find_button_request_args(request):

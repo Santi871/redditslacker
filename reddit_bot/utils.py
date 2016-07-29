@@ -89,6 +89,8 @@ class SlackResponse:
         if self.token is not None:
             attachment_dict = json.dumps([attachment_dict])
 
+        # Inorrect behavior
+
         if "attachments" not in self.response_dict:
             self.response_dict['attachments'] = [attachment_dict]
         else:

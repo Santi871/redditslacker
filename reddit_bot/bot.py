@@ -11,6 +11,7 @@ import requests
 from reddit_bot.utils import SlackResponse, SlackField, SlackButton, get_token
 import threading
 import traceback
+import puni
 
 SLACK_BOT_TOKEN = get_token('SLACK_BOT_TOKEN')
 
@@ -46,10 +47,20 @@ def own_thread(func):
 
 class RedditBot:
 
+    """Class that implements a Reddit bot to perform moderator actions in a specific subreddit"""
+
     def __init__(self, load_side_threads=True):
         handler = MultiprocessHandler()
         self.r = praw.Reddit(user_agent="windows:RedditSlacker 0.1 by /u/santi871", handler=handler)
         self.imgur = ImgurClient(get_token('IMGUR_CLIENT_ID'), get_token('IMGUR_CLIENT_SECRET'))
+        self.subreddit_name = 'explainlikeimfive'
+        self.un = puni.UserNotes(self.r, self.r.get_subreddit(self.subreddit_name))
+
+        self.usergroup_owner = 'santi871'
+        self.usergroup_mod = ('santi871', 'akuthia', 'mason11987', 'mike_pants', 'mjcapples', 'securethruobscure',
+                              'snewzie', 'teaearlgraycold', 'thom.willard', 'yarr', 'cow_co', 'sterlingphoenix',
+                              'hugepilchard', 'curmudgy', 'h2g2_researcher', 'jim777ps3', 'letstrythisagain_',
+                              'mr_magnus', 'terrorpaw', 'kodack10', 'doc_daneeka')
 
         try:
             self._authenticate()
@@ -256,3 +267,55 @@ class RedditBot:
                                 color=color, fields=[field_a, field_b])
 
         return response.response_dict
+
+    def shadowban(self, split_text, author):
+
+        """*!shadowban [user] [reason]:* Shadowbans [user] and adds usernote [reason] - USERNAME IS CASE SENSITIVE!"""
+
+        r = self.r
+        response = SlackResponse('Usage: !shadowban [username] [reason]')
+
+        if author in self.usergroup_mod:
+
+            if len(split_text) >= 2:
+
+                wiki_page = r.get_wiki_page(self.subreddit_name, "config/automoderator")
+                wiki_page_content = wiki_page.content_md
+
+                beg_ind = wiki_page_content.find("shadowbans")
+                end_ind = wiki_page_content.find("#end shadowbans", beg_ind)
+                username = split_text[0]
+                reason = ' '.join(split_text[1:])
+
+                try:
+                    n = puni.Note(username, "Shadowbanned, reason: %s" % reason, split_text[0], '', 'botban')
+
+                    replacement = ', "%s"]' % username
+
+                    newstr = wiki_page_content[:beg_ind] + \
+                             wiki_page_content[beg_ind:end_ind].replace("]", replacement) + \
+                             wiki_page_content[end_ind:]
+
+                    r.edit_wiki_page(self.subreddit_name, "config/automoderator", newstr,
+                                     reason='ELI5_ModBot shadowban user "/u/%s" executed by Slack user "%s"'
+                                            % (username, author))
+
+                    self.un.add_note(n)
+
+                    response = SlackResponse("User /u/%s has been shadowbanned" % username)
+                    field_a = SlackField("Reason", reason)
+                    response.add_attachment(fallback="Shadowbanned /u/" + username,
+                                            title="User profile",
+                                            title_link="https://www.reddit.com/user/" + username,
+                                            color='good',
+                                            fields=[field_a])
+
+                except:
+                    response = SlackResponse("Failed to shadowban user.")
+                    response.add_attachment(fallback="Shadowban fail",
+                                            title="Exception",
+                                            text=traceback.format_exc(),
+                                            color='danger')
+
+        return response.response_dict
+

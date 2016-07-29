@@ -41,7 +41,7 @@ def command():
             return Response(response=json.dumps(response), status=200, mimetype="application/json")
         else:
             commands_handler_obj.thread_command_request(request.form)
-        return "Processing your request..."
+        return "Processing your request... please allow a few seconds."
 
     else:
         return "Invalid request token."
