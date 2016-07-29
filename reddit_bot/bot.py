@@ -84,6 +84,8 @@ class RedditBot:
                 request_response = requests.post('https://slack.com/api/chat.postMessage',
                                                  params=response.response_dict)
 
+                print(str(request_response))
+
     def summary(self, split_text=None, limit=500, username=None):
 
         if split_text is not None:

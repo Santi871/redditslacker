@@ -11,9 +11,14 @@ SLACK_APP_SECRET = utils.get_token("SLACK_APP_SECRET")
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = '1'
 os.environ["OAUTHLIB_RELAX_TOKEN_SCOPE"] = '1'
 
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='')
 app.secret_key = APP_SECRET_KEY
 commands_handler_obj = commands_handler.CommandsHandler()
+
+
+@app.route('/index')
+def root():
+    return app.send_static_file('index.html')
 
 
 @app.route("/oauthcallback")
@@ -24,7 +29,7 @@ def oauth_callback():
     return "Authorization granted!"
 
 
-@app.route('/slackcommands', methods=['POST'])
+@app.route('/slack/commands', methods=['POST'])
 def command():
     if request.form.get('token') == SLACK_SLASHCMDS_SECRET:
 
@@ -50,4 +55,5 @@ def button_response():
     return "Processing your request... please allow a few seconds."
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0')
+    context = ('santihub.crt', 'santihub.key')
+    app.run(host='0.0.0.0', ssl_context=context, debug=True, threaded=True)
