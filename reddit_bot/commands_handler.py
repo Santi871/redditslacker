@@ -1,14 +1,14 @@
 import requests
 import json
-from reddit_bot import bot_threading
-from reddit_bot.bot import RedditBot
-from reddit_bot.utils import SlackResponse, SlackButton
+import reddit_bot.bot as bot
+import reddit_bot.bot_threading as bot_threading
+import reddit_bot.utils as utils
 
 
 class CommandsHandler:
 
     def __init__(self):
-        self.reddit_bot = RedditBot(load_side_threads=False)
+        self.reddit_bot = bot.RedditBot(load_side_threads=False)
 
     def thread_command_request(self, request):
         # Refactor into a decorator
@@ -43,9 +43,9 @@ class CommandsHandler:
 
         if request.get('command') == '/summary':
 
-            button_a = SlackButton("500")
-            button_b = SlackButton("1000")
-            response = SlackResponse(text='How many comments to load?')
+            button_a = utils.SlackButton("500")
+            button_b = utils.SlackButton("1000")
+            response = utils.SlackResponse(text='How many comments to load?')
             response.add_attachment(fallback="You are unable to choose a number of comments to load.",
                                     callback_id="summary_" + request['text'], color="#3AA3E3",
                                     text="Have in mind loading 1000 comments takes a little longer.",

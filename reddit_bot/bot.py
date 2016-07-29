@@ -8,12 +8,12 @@ import numpy as np
 import datetime
 import os
 import requests
-from reddit_bot.utils import SlackResponse, SlackField, SlackButton, get_token
+import reddit_bot.utils as utils
 import threading
 import traceback
 import puni
 
-SLACK_BOT_TOKEN = get_token('SLACK_BOT_TOKEN')
+SLACK_BOT_TOKEN = utils.get_token('SLACK_BOT_TOKEN')
 
 
 class CreateThread(threading.Thread):
@@ -52,7 +52,7 @@ class RedditBot:
     def __init__(self, load_side_threads=True):
         handler = MultiprocessHandler()
         self.r = praw.Reddit(user_agent="windows:RedditSlacker 0.1 by /u/santi871", handler=handler)
-        self.imgur = ImgurClient(get_token('IMGUR_CLIENT_ID'), get_token('IMGUR_CLIENT_SECRET'))
+        self.imgur = ImgurClient(utils.get_token('IMGUR_CLIENT_ID'), utils.get_token('IMGUR_CLIENT_SECRET'))
 
         try:
             self._authenticate()
@@ -86,10 +86,10 @@ class RedditBot:
     def new_comments_stream(self):
         for comment in praw.helpers.comment_stream(self.r, 'explainlikeimfive', limit=2, verbosity=0):
             if comment.is_root and comment.author.name != "ELI5_BotMod":
-                field_a = SlackField("Author", comment.author.name)
-                field_b = SlackField("Question", comment.submission.title)
-                remove_button = SlackButton("Remove", "remove_" + comment.id, style="danger")
-                response = SlackResponse(token=SLACK_BOT_TOKEN, channel="#tlc-feed")
+                field_a = utils.SlackField("Author", comment.author.name)
+                field_b = utils.SlackField("Question", comment.submission.title)
+                remove_button = utils.SlackButton("Remove", "remove_" + comment.id, style="danger")
+                response = utils.SlackResponse(token=SLACK_BOT_TOKEN, channel="#tlc-feed")
                 response.add_attachment(text=comment.body, fields=[field_b, field_a], buttons=[remove_button],
                                         color="#0073a3", title_link=comment.permalink)
 
@@ -260,9 +260,9 @@ class RedditBot:
         plt.clf()
 
         # build a response dict that will be encoded to json
-        field_a = SlackField("Troll likelihood", troll_likelihood)
-        field_b = SlackField("Total comments read", total_comments_read)
-        response = SlackResponse()
+        field_a = utils.SlackField("Troll likelihood", troll_likelihood)
+        field_b = utils.SlackField("Total comments read", total_comments_read)
+        response = utils.SlackResponse()
         response.add_attachment(fallback="Summary for /u/" + username, title="Summary for /u/" + username,
                                 title_link="https://www.reddit.com/user/" + username, image_url=link['link'],
                                 color=color, fields=[field_a, field_b])
@@ -274,7 +274,7 @@ class RedditBot:
         """*!shadowban [user] [reason]:* Shadowbans [user] and adds usernote [reason] - USERNAME IS CASE SENSITIVE!"""
 
         r = self.r
-        response = SlackResponse(text='Usage: !shadowban [username] [reason]')
+        response = utils.SlackResponse(text='Usage: !shadowban [username] [reason]')
 
         if author in self.usergroup_mod:
 
@@ -303,9 +303,9 @@ class RedditBot:
 
                     self.un.add_note(n)
 
-                    response = SlackResponse(text="User */u/%s* has been shadowbanned." % username)
-                    field_a = SlackField("Reason", reason)
-                    field_b = SlackField("Author", author)
+                    response = utils.SlackResponse(text="User */u/%s* has been shadowbanned." % username)
+                    field_a = utils.SlackField("Reason", reason)
+                    field_b = utils.SlackField("Author", author)
                     response.add_attachment(fallback="Shadowbanned /u/" + username,
                                             title="User profile",
                                             title_link="https://www.reddit.com/user/" + username,
@@ -313,7 +313,7 @@ class RedditBot:
                                             fields=[field_a, field_b])
 
                 except:
-                    response = SlackResponse(text="Failed to shadowban user.")
+                    response = utils.SlackResponse(text="Failed to shadowban user.")
                     response.add_attachment(fallback="Shadowban fail",
                                             title="Exception",
                                             text=traceback.format_exc(),

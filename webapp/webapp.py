@@ -1,6 +1,7 @@
 from flask import Flask, request, Response, redirect
 from flask_sslify import SSLify
-from reddit_bot import commands_handler, utils
+import reddit_bot.commands_handler as commands_handler
+import reddit_bot.utils as utils
 import requests
 import os
 import json
