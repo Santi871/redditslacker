@@ -1,6 +1,3 @@
-import sys
-sys.path.insert(0, "/home/pi/redditslacker/reddit_bot")
-
 from flask import Flask, request, Response, redirect
 from flask_sslify import SSLify
 import reddit_bot.commands_handler as commands_handler
@@ -59,7 +56,3 @@ def button_response():
     commands_handler_obj.thread_command_request(args_dict)
 
     return "Processing your request... please allow a few seconds."
-
-if __name__ == '__main__':
-    context = ('santihub.crt', 'santihub.key')
-    app.run(host='0.0.0.0', ssl_context=context, threaded=True)
