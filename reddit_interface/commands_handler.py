@@ -66,14 +66,13 @@ class CommandsHandler:
                 summary_button = utils.SlackButton("Summary", "summary_" + username, style='primary')
                 ban_button = utils.SlackButton("Ban", "ban_" + username, style='danger')
                 shadowban_button = utils.SlackButton("Shadowban", "shadowban_" + username, style='danger')
-                cancel_button = utils.SlackButton("Cancel")
                 field_a = utils.SlackField("Combined karma", combined_karma)
                 field_b = utils.SlackField("Redditor since", account_creation)
                 response = utils.SlackResponse()
                 response.add_attachment(title='/u/' + username, title_link="https://www.reddit.com/user/" + username,
                                         color='#3AA3E3', callback_id='user_' + request.get('text'),
                                         fields=[field_a, field_b], buttons=[summary_button, ban_button,
-                                                                            shadowban_button, cancel_button])
+                                                                            shadowban_button])
 
                 response = response.response_dict
 
