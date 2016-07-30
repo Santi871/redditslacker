@@ -62,10 +62,9 @@ class CommandsHandler:
         return response
 
     @staticmethod
-    def find_button_request_args(request):
+    def find_button_request_args(payload_dict):
 
         ret_dict = dict()
-        payload_dict = json.loads(request['payload'][0])
         command = payload_dict['callback_id'].split('_')[0]
         if command == "summary":
             ret_dict['limit'] = payload_dict['actions'][0]['value']

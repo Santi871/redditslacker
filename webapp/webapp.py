@@ -50,9 +50,15 @@ def command():
 
 @app.route('/slack/action-endpoint', methods=['POST'])
 def button_response():
-    # ADD CHECK INTERACTIONS TOKEN
-    print(str(dict(request.form)))
-    args_dict = commands_handler_obj.find_button_request_args(dict(request.form))
-    commands_handler_obj.thread_command_request(args_dict)
 
-    return "Processing your request... please allow a few seconds."
+    payload_dict = json.loads(dict(request.form)['payload'][0])
+    token = payload_dict['token']
+    if token == SLACK_SLASHCMDS_SECRET:
+
+        args_dict = commands_handler_obj.find_button_request_args(payload_dict)
+        commands_handler_obj.thread_command_request(args_dict)
+
+        return "Processing your request... please allow a few seconds."
+
+    else:
+        return "Invalid request token."
