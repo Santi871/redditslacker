@@ -43,8 +43,7 @@ class CommandsHandler:
             print("-----------------------\nUnexpected exception\n-----------------------")
             print(e)
 
-    @staticmethod
-    def define_command_response(request):
+    def define_command_response(self, request):
         response = None
 
         if request.get('command') == '/summary':
@@ -58,6 +57,29 @@ class CommandsHandler:
                                     buttons=[button_a, button_b])
 
             response = response.response_dict
+        elif response.get('command') == '/user':
+
+            if len(response.get('text').split()) == 1:
+                username = response.get('text')
+                combined_karma = self.reddit_bot.get_combined_karma(username)
+                account_creation = self.reddit_bot.get_created_datetime(username)
+
+                summary_button = utils.SlackButton("Summary", "summary_" + username, style='primary')
+                ban_button = utils.SlackButton("Ban", "ban_" + username, style='danger')
+                shadowban_button = utils.SlackButton("Shadowban", "shadowban_" + username, style='danger')
+                cancel_button = utils.SlackButton("Cancel")
+                field_a = utils.SlackField("Combined karma", combined_karma)
+                field_b = utils.SlackField("Redditor since", account_creation)
+                response = utils.SlackResponse()
+                response.add_attachment(title='/u/' + username, title_link="https://www.reddit.com/user/" + username,
+                                        color='#3AA3E3', callback_id='user_' + request.get('text'),
+                                        fields=[field_a, field_b], buttons=[summary_button, ban_button,
+                                                                            shadowban_button, cancel_button])
+
+                response = response.response_dict
+
+            else:
+                response = "Usage /user [username]."
 
         return response
 

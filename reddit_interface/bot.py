@@ -11,7 +11,9 @@ import requests
 import reddit_interface.utils as utils
 import threading
 import traceback
+from datetime import datetime
 import puni
+
 
 SLACK_BOT_TOKEN = utils.get_token('SLACK_BOT_TOKEN')
 
@@ -97,6 +99,15 @@ class RedditBot:
                                                  params=response.response_dict)
 
                 print(str(request_response))
+
+    def get_combined_karma(self, username):
+        redditor = self.r.get_redditor(username)
+        return redditor.link_karma + redditor.comment_karma
+
+    def get_created_datetime(self, username):
+        redditor = self.r.get_redditor(username)
+        date = str(datetime.datetime.fromtimestamp(redditor.created_utc))
+        return date
 
     def summary(self, split_text=None, limit=500, username=None):
 
