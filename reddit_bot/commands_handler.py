@@ -31,10 +31,8 @@ class CommandsHandler:
                 limit = int(request.get('limit'))
                 payload = getattr(self.reddit_bot, command)(limit=limit, username=username)
 
-            print(str(payload))
-
-            response = requests.post(response_url, data=json.dumps(payload), headers={'content-type': 'application/json'})
-            print(str(response))
+            response = requests.post(response_url, data=json.dumps(payload),
+                                     headers={'content-type': 'application/json'})
 
             return response
         except Exception as e:
