@@ -8,7 +8,7 @@ import numpy as np
 import datetime
 import os
 import requests
-import reddit_bot.utils as utils
+import reddit_interface.utils as utils
 import threading
 import traceback
 import puni
@@ -276,7 +276,7 @@ class RedditBot:
 
         return response.response_dict
 
-    def shadowban(self, split_text, author):
+    def shadowban(self, split_text, author, debug=False):
 
         """*!shadowban [user] [reason]:* Shadowbans [user] and adds usernote [reason] - USERNAME IS CASE SENSITIVE!"""
 
@@ -304,11 +304,13 @@ class RedditBot:
                              wiki_page_content[beg_ind:end_ind].replace("]", replacement) + \
                              wiki_page_content[end_ind:]
 
-                    r.edit_wiki_page(self.subreddit_name, "config/automoderator", newstr,
-                                     reason='ELI5_ModBot shadowban user "/u/%s" executed by Slack user "%s"'
-                                            % (username, author))
+                    if not debug:
 
-                    self.un.add_note(n)
+                        r.edit_wiki_page(self.subreddit_name, "config/automoderator", newstr,
+                                         reason='ELI5_ModBot shadowban user "/u/%s" executed by Slack user "%s"'
+                                                % (username, author))
+
+                        self.un.add_note(n)
 
                     response = utils.SlackResponse(text="User */u/%s* has been shadowbanned." % username)
                     field_a = utils.SlackField("Reason", reason)

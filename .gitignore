@@ -27,6 +27,10 @@ var/
 /webapp/oauth.ini
 /webapp/santihub.crt
 /webapp/santihub.key
+/santihub.key
+/oauth.ini
+/santihub.crt
+/tokens.ini
 *.egg
 
 # PyInstaller

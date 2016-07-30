@@ -1,14 +1,17 @@
 import requests
 import json
-import reddit_bot.bot as bot
-import reddit_bot.bot_threading as bot_threading
-import reddit_bot.utils as utils
+import reddit_interface.bot as bot
+import reddit_interface.bot_threading as bot_threading
+import reddit_interface.utils as utils
+import reddit_interface.database as db
 
 
 class CommandsHandler:
 
-    def __init__(self):
+    def __init__(self, debug=False):
         self.reddit_bot = bot.RedditBot(load_side_threads=False)
+        self.db = db.RedditSlackerDatabse()
+        self.debug = debug
 
     def thread_command_request(self, request):
         # Refactor into a decorator
@@ -22,9 +25,10 @@ class CommandsHandler:
         response_url = request.get('response_url')
         try:
             if str(type(request)) == "<class 'werkzeug.datastructures.ImmutableMultiDict'>":
+                self.db.log_command(request)
                 command = request.get('command')[1:]
                 payload = getattr(self.reddit_bot, command)(split_text=request.get('text').split(),
-                                                            author=request.get('user_name'))
+                                                            author=request.get('user_name'), debug=self.debug)
             else:
                 command = request.get('command')
                 username = request.get('target_user')

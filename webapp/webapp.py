@@ -1,7 +1,7 @@
 from flask import Flask, request, Response, redirect
 from flask_sslify import SSLify
-import reddit_bot.commands_handler as commands_handler
-import reddit_bot.utils as utils
+import reddit_interface.commands_handler as commands_handler
+import reddit_interface.utils as utils
 import requests
 import os
 import json
@@ -16,7 +16,7 @@ os.environ["OAUTHLIB_RELAX_TOKEN_SCOPE"] = '1'
 app = Flask(__name__, static_url_path='')
 sslify = SSLify(app)
 app.secret_key = APP_SECRET_KEY
-commands_handler_obj = commands_handler.CommandsHandler()
+commands_handler_obj = commands_handler.CommandsHandler(debug=True)
 
 
 @app.route('/index')
