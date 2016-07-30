@@ -11,8 +11,8 @@ import requests
 import reddit_interface.utils as utils
 import threading
 import traceback
-from datetime import datetime
 import puni
+import datetime
 
 
 SLACK_BOT_TOKEN = utils.get_token('SLACK_BOT_TOKEN')
@@ -175,6 +175,13 @@ class RedditBot:
             i += 1
 
         total_comments_read = i
+
+        if not total_comments_read:
+            response = utils.SlackResponse()
+            response.add_attachment(fallback="Summary for /u/" + username, text="Error: user has no comments.",
+                                    color='danger')
+
+            return response.response_dict
 
         troll_index *= limit / total_comments_read
 

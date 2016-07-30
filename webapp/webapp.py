@@ -36,12 +36,13 @@ def oauth_callback():
 def command():
     if request.form.get('token') == SLACK_SLASHCMDS_SECRET:
 
+        commands_handler_obj.db.log_command(request.form)
         response = commands_handler_obj.define_command_response(request.form)
 
         if response is not None:
-            return Response(response=json.dumps(response), status=200, mimetype="application/json")
+            return Response(response=json.dumps(response), mimetype="application/json")
         else:
-            commands_handler_obj.thread_command_request(request.form)
+            commands_handler_obj.thread_command_execution(request.form)
         return "Processing your request... please allow a few seconds."
 
     else:
@@ -53,12 +54,14 @@ def button_response():
 
     payload_dict = json.loads(dict(request.form)['payload'][0])
     token = payload_dict['token']
+    print(str(payload_dict))
     if token == SLACK_SLASHCMDS_SECRET:
 
-        args_dict = commands_handler_obj.find_button_request_args(payload_dict)
-        commands_handler_obj.thread_command_request(args_dict)
+        response = commands_handler_obj.handle_button_request(payload_dict)
+        # args_dict = commands_handler_obj.find_button_request_args(payload_dict)
+        # commands_handler_obj.thread_command_request(args_dict)
 
-        return "Processing your request... please allow a few seconds."
-
+        # return "Processing your request... please allow a few seconds."
+        return Response(response=json.dumps(response), mimetype="application/json")
     else:
         return "Invalid request token."
