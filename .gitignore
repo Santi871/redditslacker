@@ -42,6 +42,7 @@ var/
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
+/modlog_alreadydone.txt
 /redditslacker_main.db
 
 # Unit test / coverage reports

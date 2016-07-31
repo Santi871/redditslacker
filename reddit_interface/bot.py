@@ -74,6 +74,7 @@ class RedditBot:
         # self.hello()
         if load_side_threads:
             self.new_comments_stream()
+            self.track_users()
 
     def _authenticate(self):
         o = OAuth2Util.OAuth2Util(self.r)
@@ -104,10 +105,11 @@ class RedditBot:
     @own_thread
     def track_users(self):
         subreddit = self.r.get_subreddit(self.subreddit_name)
-        with open("modlog_alreadydone.txt", "r") as text_file:
+        with open("modlog_alreadydone.txt", "a+") as text_file:
             already_done = text_file.read().split(",")
 
         while True:
+            self.r._use_oauth = False
             modlog = subreddit.get_mod_log(limit=100)
 
             for item in modlog:
