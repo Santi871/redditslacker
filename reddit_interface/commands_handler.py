@@ -9,8 +9,8 @@ import reddit_interface.database as db
 class CommandsHandler:
 
     def __init__(self, debug=False):
-        self.reddit_bot = bot.RedditBot(load_side_threads=False)
-        self.db = db.RedditSlackerDatabse()
+        self.db = db.RedditSlackerDatabase()
+        self.reddit_bot = bot.RedditBot(self.db, load_side_threads=True)
         self.debug = debug
 
     def thread_command_execution(self, request):
@@ -90,23 +90,13 @@ class CommandsHandler:
             if payload_dict.get('actions')[0]['value'].startswith("summary"):
                 username = payload_dict.get('actions')[0]['value'].split('_')[1]
 
-                button_a = utils.SlackButton("500")
-                button_b = utils.SlackButton("1000")
-                response = utils.SlackResponse(text='How many comments to load?')
-                response.add_attachment(fallback="You are unable to choose a number of comments to load.",
-                                        callback_id="summary_" + username, color="#3AA3E3",
-                                        text="Have in mind loading 1000 comments takes a little longer.",
-                                        buttons=[button_a, button_b])
+                summary_args_dict = dict()
+                summary_args_dict['command'] = "summary"
+                summary_args_dict['limit'] = 500
+                summary_args_dict['target_user'] = username
+                summary_args_dict['response_url'] = payload_dict['response_url']
 
-                response = response.response_dict
-        elif callback_id.startswith("summary"):
-            summary_args_dict = dict()
-            summary_args_dict['command'] = "summary"
-            summary_args_dict['limit'] = payload_dict['actions'][0]['value']
-            summary_args_dict['target_user'] = payload_dict['callback_id'].split('_')[1]
-            summary_args_dict['response_url'] = payload_dict['response_url']
-
-            self.thread_command_execution(summary_args_dict)
+                self.thread_command_execution(summary_args_dict)
 
         return response
 

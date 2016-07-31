@@ -51,8 +51,9 @@ class RedditBot:
 
     """Class that implements a Reddit bot to perform moderator actions in a specific subreddit"""
 
-    def __init__(self, load_side_threads=True):
+    def __init__(self, db, load_side_threads=True):
         handler = MultiprocessHandler()
+        self.db = db
         self.r = praw.Reddit(user_agent="windows:RedditSlacker 0.1 by /u/santi871", handler=handler)
         self.imgur = ImgurClient(utils.get_token('IMGUR_CLIENT_ID'), utils.get_token('IMGUR_CLIENT_SECRET'))
 
@@ -86,7 +87,7 @@ class RedditBot:
 
     @own_thread
     def new_comments_stream(self):
-        for comment in praw.helpers.comment_stream(self.r, 'explainlikeimfive', limit=2, verbosity=0):
+        for comment in praw.helpers.comment_stream(self.r, self.subreddit_name, limit=2, verbosity=0):
             if comment.is_root and comment.author.name != "ELI5_BotMod":
                 field_a = utils.SlackField("Author", comment.author.name)
                 field_b = utils.SlackField("Question", comment.submission.title)
@@ -99,6 +100,16 @@ class RedditBot:
                                                  params=response.response_dict)
 
                 print(str(request_response))
+
+    @own_thread
+    def track_user_offenses(self):
+        subreddit = self.r.get_subreddit(self.subreddit_name)
+
+        while True:
+            modlog = subreddit.get_mod_log(limit=10)
+
+            for item in modlog:
+                user_dict = self.db.handle_mod_log(item)
 
     def get_combined_karma(self, username):
         redditor = self.r.get_redditor(username)
