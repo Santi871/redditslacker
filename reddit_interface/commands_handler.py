@@ -100,14 +100,6 @@ class CommandsHandler:
                                                  track_button, ban_button,
                                                  shadowban_button])
 
-                summary_args_dict = dict()
-                summary_args_dict['command'] = "summary"
-                summary_args_dict['limit'] = 500
-                summary_args_dict['target_user'] = username
-                summary_args_dict['response_url'] = request.get('response_url')
-
-                self.thread_command_execution(summary_args_dict)
-
                 response = response.response_dict
 
             else:
