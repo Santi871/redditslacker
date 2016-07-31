@@ -90,15 +90,28 @@ class RedditSlackerDatabase:
 
         return return_dict
 
-    def fetch_user_status(self, username):
-
+    def fetch_user_log(self, username):
         self.cur.execute('''SELECT * FROM USER_TRACKS WHERE USER_NAME = ?''', (username,))
         user_track = self.cur.fetchone()
 
         if user_track is None:
-            return False, False, False
+            track_info = ("No record", "No record", "No record", "No", "No", "No")
+        else:
+            if user_track[5]:
+                is_permamuted = "Yes"
+            else:
+                is_permamuted = "No"
+            if user_track[6]:
+                is_tracked = "Yes"
+            else:
+                is_tracked = "No"
+            if user_track[7]:
+                is_shadowbanned = "Yes"
+            else:
+                is_shadowbanned = "No"
+            track_info = (user_track[2], user_track[3], user_track[4], is_permamuted, is_tracked, is_shadowbanned)
 
-        return user_track[5], user_track[6], user_track[7]
+        return track_info
 
     def update_user_status(self, username, status):
         # Add updates for shadowban, permamuted and tracked

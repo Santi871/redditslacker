@@ -102,9 +102,10 @@ class RedditBot:
                 print(str(request_response))
 
     @own_thread
-    def track_user_offenses(self):
+    def track_users(self):
         subreddit = self.r.get_subreddit(self.subreddit_name)
-        already_done = []
+        with open("modlog_alreadydone.txt", "r") as text_file:
+            already_done = text_file.read().split(",")
 
         while True:
             modlog = subreddit.get_mod_log(limit=100)
@@ -113,7 +114,10 @@ class RedditBot:
                 if item.id not in already_done:
                     user_dict = self.db.handle_mod_log(item)
                     already_done.append(item.id)
-            sleep(60)
+
+                    with open("modlog_alreadydone.txt", "w") as text_file:
+                        print(item.id + ",", file=text_file)
+            sleep(120)
 
     def get_combined_karma(self, username):
         redditor = self.r.get_redditor(username)

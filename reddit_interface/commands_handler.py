@@ -62,20 +62,21 @@ class CommandsHandler:
                 username = request.get('text')
                 combined_karma = self.reddit_bot.get_combined_karma(username)
                 account_creation = self.reddit_bot.get_created_datetime(username)
-                user_is_permamuted, user_is_tracked,\
-                    user_is_shadowbanned = self.reddit_bot.db.fetch_user_status(username)
 
-                if user_is_permamuted:
+                comment_removals, link_removals, bans, user_is_permamuted, user_is_tracked,\
+                user_is_shadowbanned = self.reddit_bot.db.fetch_user_log(username)
+
+                if user_is_permamuted == "Yes":
                     permamute_button = utils.SlackButton("Unpermamute", "unpermamute_" + username)
                 else:
                     permamute_button = utils.SlackButton("Permamute", "permamute_" + username)
 
-                if user_is_tracked:
+                if user_is_tracked == "Yes":
                     track_button = utils.SlackButton("Untrack", "untrack_" + username)
                 else:
                     track_button = utils.SlackButton("Track", "track_" + username)
 
-                if user_is_shadowbanned:
+                if user_is_shadowbanned == "Yes":
                     shadowban_button = utils.SlackButton("Unshadowban", "unshadowban_" + username, style='danger')
                 else:
                     shadowban_button = utils.SlackButton("Shadowban", "shadowban_" + username, style='danger')
@@ -84,12 +85,20 @@ class CommandsHandler:
                 ban_button = utils.SlackButton("Ban", "ban_" + username, style='danger')
                 field_a = utils.SlackField("Combined karma", combined_karma)
                 field_b = utils.SlackField("Redditor since", account_creation)
+                field_c = utils.SlackField("Removed comments", comment_removals)
+                field_d = utils.SlackField("Removed questions", link_removals)
+                field_e = utils.SlackField("Bans", bans)
+                field_f = utils.SlackField("Shadowbanned", user_is_shadowbanned)
+                field_g = utils.SlackField("Permamuted", user_is_permamuted)
+                field_h = utils.SlackField("Tracked", user_is_tracked)
                 response = utils.SlackResponse()
                 response.add_attachment(title='/u/' + username, title_link="https://www.reddit.com/user/" + username,
                                         color='#3AA3E3', callback_id='user_' + request.get('text'),
-                                        fields=[field_a, field_b], buttons=[summary_button, permamute_button,
-                                                                            track_button, ban_button,
-                                                                            shadowban_button])
+                                        fields=[field_a, field_b, field_c, field_d, field_e, field_f, field_g,
+                                                field_h],
+                                        buttons=[summary_button, permamute_button,
+                                                 track_button, ban_button,
+                                                 shadowban_button])
 
                 response = response.response_dict
 
