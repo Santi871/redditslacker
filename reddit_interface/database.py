@@ -26,7 +26,9 @@ class RedditSlackerDatabase:
                             USER_NAME TEXT NOT NULL,
                             REMOVED_COMMENTS INTEGER NOT NULL,
                             REMOVED_SUBMISSIONS INTEGER NOT NULL,
-                            BANS INTEGER NOT NULL)''')
+                            BANS INTEGER NOT NULL,
+                            PERMAMUTED INTEGER NOT NULL DEFAULT 0,
+                            TRACKED INTEGER NOT NULL DEFAULT 0)''')
 
     def log_command(self, form):
 
