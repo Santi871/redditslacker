@@ -88,6 +88,8 @@ class RedditBot:
 
     @own_thread
     def new_comments_stream(self):
+
+        self.r._use_oauth = False
         for comment in praw.helpers.comment_stream(self.r, self.subreddit_name, limit=2, verbosity=0):
             if comment.is_root and comment.author.name != "ELI5_BotMod":
                 field_a = utils.SlackField("Author", comment.author.name)
@@ -105,7 +107,7 @@ class RedditBot:
     @own_thread
     def track_users(self):
         subreddit = self.r.get_subreddit(self.subreddit_name)
-        with open("modlog_alreadydone.txt", "a+") as text_file:
+        with open("modlog_alreadydone.txt", "r") as text_file:
             already_done = text_file.read().split(",")
 
         while True:
@@ -117,8 +119,8 @@ class RedditBot:
                     user_dict = self.db.handle_mod_log(item)
                     already_done.append(item.id)
 
-                    with open("modlog_alreadydone.txt", "w") as text_file:
-                        print(item.id + ",", file=text_file)
+                    with open("modlog_alreadydone.txt", "a") as text_file:
+                        print(item.id + ",", end="", file=text_file)
             sleep(120)
 
     def get_combined_karma(self, username):

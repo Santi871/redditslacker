@@ -86,7 +86,7 @@ class CommandsHandler:
                 field_a = utils.SlackField("Combined karma", combined_karma)
                 field_b = utils.SlackField("Redditor since", account_creation)
                 field_c = utils.SlackField("Removed comments", comment_removals)
-                field_d = utils.SlackField("Removed questions", link_removals)
+                field_d = utils.SlackField("Removed submissions", link_removals)
                 field_e = utils.SlackField("Bans", bans)
                 field_f = utils.SlackField("Shadowbanned", user_is_shadowbanned)
                 field_g = utils.SlackField("Permamuted", user_is_permamuted)
@@ -99,6 +99,14 @@ class CommandsHandler:
                                         buttons=[summary_button, permamute_button,
                                                  track_button, ban_button,
                                                  shadowban_button])
+
+                summary_args_dict = dict()
+                summary_args_dict['command'] = "summary"
+                summary_args_dict['limit'] = 500
+                summary_args_dict['target_user'] = username
+                summary_args_dict['response_url'] = request.get('response_url')
+
+                self.thread_command_execution(summary_args_dict)
 
                 response = response.response_dict
 
