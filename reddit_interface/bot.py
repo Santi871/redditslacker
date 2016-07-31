@@ -5,7 +5,7 @@ from imgurpython import ImgurClient
 import matplotlib.pyplot as plt
 import math
 import numpy as np
-import datetime
+from time import sleep
 import os
 import requests
 import reddit_interface.utils as utils
@@ -104,12 +104,16 @@ class RedditBot:
     @own_thread
     def track_user_offenses(self):
         subreddit = self.r.get_subreddit(self.subreddit_name)
+        already_done = []
 
         while True:
             modlog = subreddit.get_mod_log(limit=10)
 
             for item in modlog:
-                user_dict = self.db.handle_mod_log(item)
+                if item.id not in already_done
+                    user_dict = self.db.handle_mod_log(item)
+                    already_done.append(item.id)
+            sleep(60)
 
     def get_combined_karma(self, username):
         redditor = self.r.get_redditor(username)
