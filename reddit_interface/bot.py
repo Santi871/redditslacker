@@ -107,7 +107,7 @@ class RedditBot:
         already_done = []
 
         while True:
-            modlog = subreddit.get_mod_log(limit=10)
+            modlog = subreddit.get_mod_log(limit=100)
 
             for item in modlog:
                 if item.id not in already_done:
