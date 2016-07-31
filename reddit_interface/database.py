@@ -21,14 +21,15 @@ class RedditSlackerDatabase:
                 ARGS TEXT NOT NULL,
                 DATETIME TEXT NOT NULL)''')
 
-            self.db.execute('''CREATE TABLE IF NOT EXISTS OFFENSE_TRACK
+            self.db.execute('''CREATE TABLE IF NOT EXISTS USER_TRACKS
                             (ID INTEGER PRIMARY KEY AUTOINCREMENT,
                             USER_NAME TEXT NOT NULL,
                             REMOVED_COMMENTS INTEGER NOT NULL,
                             REMOVED_SUBMISSIONS INTEGER NOT NULL,
                             BANS INTEGER NOT NULL,
                             PERMAMUTED INTEGER NOT NULL DEFAULT 0,
-                            TRACKED INTEGER NOT NULL DEFAULT 0)''')
+                            TRACKED INTEGER NOT NULL DEFAULT 0,
+                            SHADOWBANNED INTEGER NOT NULL DEFAULT 0)''')
 
     def log_command(self, form):
 
@@ -57,7 +58,7 @@ class RedditSlackerDatabase:
         user_link_removals = 0
         user_bans = 0
 
-        self.cur.execute('''SELECT * FROM OFFENSE_TRACK WHERE USER_NAME = ?''', (username,))
+        self.cur.execute('''SELECT * FROM USER_TRACKS WHERE USER_NAME = ?''', (username,))
         user_track = self.cur.fetchone()
 
         if user_track is not None:
@@ -74,13 +75,13 @@ class RedditSlackerDatabase:
 
         if user_track is not None:
 
-            self.cur.execute('''REPLACE INTO OFFENSE_TRACK(ID, USER_NAME, REMOVED_COMMENTS,
+            self.cur.execute('''REPLACE INTO USER_TRACKS(ID, USER_NAME, REMOVED_COMMENTS,
                                 REMOVED_SUBMISSIONS, BANS) VALUES(?,?,?,?,?)''', (user_track[0], username,
                                                                                   user_comment_removals,
                                                                                   user_link_removals,
                                                                                   user_bans))
         else:
-            self.cur.execute('''INSERT INTO OFFENSE_TRACK(USER_NAME, REMOVED_COMMENTS, REMOVED_SUBMISSIONS, BANS)
+            self.cur.execute('''INSERT INTO USER_TRACKS(USER_NAME, REMOVED_COMMENTS, REMOVED_SUBMISSIONS, BANS)
                                 VALUES(?,?,?,?)''', (username, user_comment_removals, user_link_removals, user_bans))
 
         return_dict = {"username": username, "comment_removals": user_comment_removals,
@@ -88,3 +89,20 @@ class RedditSlackerDatabase:
                        "bans": user_bans}
 
         return return_dict
+
+    def fetch_user_status(self, username):
+
+        self.cur.execute('''SELECT * FROM USER_TRACKS WHERE USER_NAME = ?''', (username,))
+        user_track = self.cur.fetchone()
+
+        if user_track is None:
+            return False, False, False
+
+        return user_track[5], user_track[6], user_track[7]
+
+    def update_user_status(self, username, status):
+        # Add updates for shadowban, permamuted and tracked
+        pass
+
+
+

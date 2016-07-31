@@ -62,16 +62,33 @@ class CommandsHandler:
                 username = request.get('text')
                 combined_karma = self.reddit_bot.get_combined_karma(username)
                 account_creation = self.reddit_bot.get_created_datetime(username)
+                user_is_permamuted, user_is_tracked,\
+                    user_is_shadowbanned = self.reddit_bot.db.fetch_user_status(username)
+
+                if user_is_permamuted:
+                    permamute_button = utils.SlackButton("Unpermamute", "unpermamute_" + username)
+                else:
+                    permamute_button = utils.SlackButton("Permamute", "permamute_" + username)
+
+                if user_is_tracked:
+                    track_button = utils.SlackButton("Untrack", "untrack_" + username)
+                else:
+                    track_button = utils.SlackButton("Track", "track_" + username)
+
+                if user_is_shadowbanned:
+                    shadowban_button = utils.SlackButton("Unshadowban", "unshadowban_" + username, style='danger')
+                else:
+                    shadowban_button = utils.SlackButton("Shadowban", "shadowban_" + username, style='danger')
 
                 summary_button = utils.SlackButton("Summary", "summary_" + username, style='primary')
                 ban_button = utils.SlackButton("Ban", "ban_" + username, style='danger')
-                shadowban_button = utils.SlackButton("Shadowban", "shadowban_" + username, style='danger')
                 field_a = utils.SlackField("Combined karma", combined_karma)
                 field_b = utils.SlackField("Redditor since", account_creation)
                 response = utils.SlackResponse()
                 response.add_attachment(title='/u/' + username, title_link="https://www.reddit.com/user/" + username,
                                         color='#3AA3E3', callback_id='user_' + request.get('text'),
-                                        fields=[field_a, field_b], buttons=[summary_button, ban_button,
+                                        fields=[field_a, field_b], buttons=[summary_button, permamute_button,
+                                                                            track_button, ban_button,
                                                                             shadowban_button])
 
                 response = response.response_dict
