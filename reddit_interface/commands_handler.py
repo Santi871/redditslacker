@@ -4,6 +4,7 @@ import reddit_interface.bot as bot
 import reddit_interface.bot_threading as bot_threading
 import reddit_interface.utils as utils
 import reddit_interface.database as db
+import traceback
 
 
 class CommandsHandler:
@@ -24,23 +25,28 @@ class CommandsHandler:
 
         response_url = request.get('response_url')
         try:
-            if str(type(request)) == "<class 'werkzeug.datastructures.ImmutableMultiDict'>":
+            if str(type(request)) == "<class 'werkzeug.datastructures.ImmutableMultiDict'>"\
+                    and request.get('command') != "/user":
                 command = request.get('command')[1:]
                 payload = getattr(self.reddit_bot, command)(split_text=request.get('text').split(),
                                                             author=request.get('user_name'), debug=self.debug)
             else:
                 command = request.get('command')
+
+                if command == "/user":
+                    return None
                 username = request.get('target_user')
                 limit = int(request.get('limit'))
-                payload = getattr(self.reddit_bot, command)(limit=limit, username=username)
+                user_status = request.get('user_status')
+                payload = getattr(self.reddit_bot, command)(limit=limit, username=username, user_status=user_status)
 
             response = requests.post(response_url, data=json.dumps(payload),
                                      headers={'content-type': 'application/json'})
 
             return response
-        except Exception as e:
+        except:
             print("-----------------------\nUnexpected exception\n-----------------------")
-            print(e)
+            print(traceback.format_exc())
 
     def define_command_response(self, request):
         response = None
@@ -60,47 +66,16 @@ class CommandsHandler:
 
             if len(request.get('text').split()) == 1:
                 username = request.get('text')
-                combined_karma = self.reddit_bot.get_combined_karma(username)
-                account_creation = self.reddit_bot.get_created_datetime(username)
+                user_status = self.reddit_bot.db.fetch_user_log(username)
 
-                comment_removals, link_removals, bans, user_is_permamuted, user_is_tracked,\
-                user_is_shadowbanned = self.reddit_bot.db.fetch_user_log(username)
+                summary_args_dict = dict()
+                summary_args_dict['command'] = "summary"
+                summary_args_dict['limit'] = 500
+                summary_args_dict['target_user'] = username
+                summary_args_dict['user_status'] = user_status
+                summary_args_dict['response_url'] = request.get('response_url')
 
-                if user_is_permamuted == "Yes":
-                    permamute_button = utils.SlackButton("Unpermamute", "unpermamute_" + username)
-                else:
-                    permamute_button = utils.SlackButton("Permamute", "permamute_" + username)
-
-                if user_is_tracked == "Yes":
-                    track_button = utils.SlackButton("Untrack", "untrack_" + username)
-                else:
-                    track_button = utils.SlackButton("Track", "track_" + username)
-
-                if user_is_shadowbanned == "Yes":
-                    shadowban_button = utils.SlackButton("Unshadowban", "unshadowban_" + username, style='danger')
-                else:
-                    shadowban_button = utils.SlackButton("Shadowban", "shadowban_" + username, style='danger')
-
-                summary_button = utils.SlackButton("Summary", "summary_" + username, style='primary')
-                ban_button = utils.SlackButton("Ban", "ban_" + username, style='danger')
-                field_a = utils.SlackField("Combined karma", combined_karma)
-                field_b = utils.SlackField("Redditor since", account_creation)
-                field_c = utils.SlackField("Removed comments", comment_removals)
-                field_d = utils.SlackField("Removed submissions", link_removals)
-                field_e = utils.SlackField("Bans", bans)
-                field_f = utils.SlackField("Shadowbanned", user_is_shadowbanned)
-                field_g = utils.SlackField("Permamuted", user_is_permamuted)
-                field_h = utils.SlackField("Tracked", user_is_tracked)
-                response = utils.SlackResponse()
-                response.add_attachment(title='/u/' + username, title_link="https://www.reddit.com/user/" + username,
-                                        color='#3AA3E3', callback_id='user_' + request.get('text'),
-                                        fields=[field_a, field_b, field_c, field_d, field_e, field_f, field_g,
-                                                field_h],
-                                        buttons=[summary_button, permamute_button,
-                                                 track_button, ban_button,
-                                                 shadowban_button])
-
-                response = response.response_dict
+                self.thread_command_execution(summary_args_dict)
 
             else:
                 response = "Usage: /user [username]."

@@ -123,16 +123,13 @@ class RedditBot:
                         print(item.id + ",", end="", file=text_file)
             sleep(120)
 
-    def get_combined_karma(self, username):
-        redditor = self.r.get_redditor(username)
-        return redditor.link_karma + redditor.comment_karma
-
-    def get_created_datetime(self, username):
+    def get_user_details(self, username):
         redditor = self.r.get_redditor(username)
         date = str(datetime.datetime.fromtimestamp(redditor.created_utc))
-        return date
 
-    def summary(self, split_text=None, limit=500, username=None):
+        return redditor.link_karma + redditor.comment_karma, date
+
+    def summary(self, split_text=None, limit=500, username=None, user_status=None):
 
         if split_text is not None:
             username = split_text[0]
@@ -307,12 +304,53 @@ class RedditBot:
 
         plt.clf()
 
+        comment_removals = user_status[0]
+        link_removals = user_status[1]
+        bans = user_status[2]
+        user_is_permamuted = user_status[3]
+        user_is_tracked = user_status[4]
+        user_is_shadowbanned = user_status[5]
+        combined_karma = user.link_karma + user.comment_karma
+        account_creation = str(datetime.datetime.fromtimestamp(user.created_utc))
+
+        if user_is_permamuted == "Yes":
+            permamute_button = utils.SlackButton("Unpermamute", "unpermamute_" + username)
+        else:
+            permamute_button = utils.SlackButton("Permamute", "permamute_" + username)
+
+        if user_is_tracked == "Yes":
+            track_button = utils.SlackButton("Untrack", "untrack_" + username)
+        else:
+            track_button = utils.SlackButton("Track", "track_" + username)
+
+        if user_is_shadowbanned == "Yes":
+            shadowban_button = utils.SlackButton("Unshadowban", "unshadowban_" + username, style='danger')
+        else:
+            shadowban_button = utils.SlackButton("Shadowban", "shadowban_" + username, style='danger')
+
+        ban_button = utils.SlackButton("Ban", "ban_" + username, style='danger')
+        field_a = utils.SlackField("Combined karma", combined_karma)
+        field_b = utils.SlackField("Redditor since", account_creation)
+        field_c = utils.SlackField("Removed comments", comment_removals)
+        field_d = utils.SlackField("Removed submissions", link_removals)
+        field_e = utils.SlackField("Bans", bans)
+        field_f = utils.SlackField("Shadowbanned", user_is_shadowbanned)
+        field_g = utils.SlackField("Permamuted", user_is_permamuted)
+        field_h = utils.SlackField("Tracked", user_is_tracked)
+        response = utils.SlackResponse()
+        response.add_attachment(title='Summary for /u/' + username,
+                                title_link="https://www.reddit.com/user/" + username,
+                                color='#3AA3E3', callback_id='user_' + username,
+                                fields=[field_a, field_b, field_c, field_d, field_e, field_f, field_g,
+                                        field_h],
+                                buttons=[track_button,
+                                         permamute_button, ban_button,
+                                         shadowban_button])
+
         # build a response dict that will be encoded to json
         field_a = utils.SlackField("Troll likelihood", troll_likelihood)
         field_b = utils.SlackField("Total comments read", total_comments_read)
-        response = utils.SlackResponse()
-        response.add_attachment(fallback="Summary for /u/" + username, title="Summary for /u/" + username,
-                                title_link="https://www.reddit.com/user/" + username, image_url=link['link'],
+        response.add_attachment(fallback="Summary for /u/" + username, image_url=link['link'],
                                 color=color, fields=[field_a, field_b])
 
         return response.response_dict
