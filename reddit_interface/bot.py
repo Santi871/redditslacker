@@ -110,7 +110,7 @@ class RedditBot:
             modlog = subreddit.get_mod_log(limit=10)
 
             for item in modlog:
-                if item.id not in already_done
+                if item.id not in already_done:
                     user_dict = self.db.handle_mod_log(item)
                     already_done.append(item.id)
             sleep(60)
