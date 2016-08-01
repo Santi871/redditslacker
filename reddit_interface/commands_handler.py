@@ -84,12 +84,26 @@ class CommandsHandler:
     def handle_button_request(self, payload_dict):
 
         response = "Processing your request... please allow a few seconds."
+        re_type = "str"
         callback_id = payload_dict.get('callback_id')
+        button_pressed = payload_dict.get('actions')[0]['value'].split('_')[0]
+        target_user = '_'.join(payload_dict.get('actions')[0]['value'].split('_')[1:])
+        author = payload_dict.get('user')['name']
 
-        if callback_id.startswith("user"):
+        special_buttons = ["shadowban", "unshadowban"]
+
+        if callback_id.startswith("user") and button_pressed not in special_buttons:
             response = self.update_user_track(payload_dict)
+        elif button_pressed == "shadowban":
+            response = self.reddit_bot.shadowban(target_user, author)
+            self.reddit_bot.db.update_user_status(target_user, "shadowban")
+            re_type = "json"
+        elif button_pressed == "unshadowban":
+            response = self.reddit_bot.unshadowban(target_user, author)
+            self.reddit_bot.db.update_user_status(target_user, "unshadowban")
+            re_type = "json"
 
-        return response
+        return response, re_type
 
     def update_user_track(self, payload_dict):
 

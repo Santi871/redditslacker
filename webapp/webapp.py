@@ -16,7 +16,7 @@ os.environ["OAUTHLIB_RELAX_TOKEN_SCOPE"] = '1'
 app = Flask(__name__, static_url_path='')
 sslify = SSLify(app)
 app.secret_key = APP_SECRET_KEY
-commands_handler_obj = commands_handler.CommandsHandler(debug=True)
+commands_handler_obj = commands_handler.CommandsHandler()
 
 
 @app.route('/index')
@@ -57,11 +57,15 @@ def button_response():
     print(str(payload_dict))
     if token == SLACK_SLASHCMDS_SECRET:
 
-        response = commands_handler_obj.handle_button_request(payload_dict)
+        response, re_type = commands_handler_obj.handle_button_request(payload_dict)
         # args_dict = commands_handler_obj.find_button_request_args(payload_dict)
         # commands_handler_obj.thread_command_request(args_dict)
 
         # return "Processing your request... please allow a few seconds."
-        return Response(response=json.dumps(response), mimetype="application/json")
+
+        if re_type == "json":
+            return Response(response=json.dumps(response), mimetype="application/json")
+        else:
+            return response
     else:
         return "Invalid request token."

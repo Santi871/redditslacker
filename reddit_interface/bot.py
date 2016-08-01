@@ -14,7 +14,6 @@ import traceback
 import puni
 import datetime
 
-
 SLACK_BOT_TOKEN = utils.get_token('SLACK_BOT_TOKEN')
 
 
@@ -46,15 +45,14 @@ class CreateThread(threading.Thread):
 
 def own_thread(func):
     def wrapped_f(*args):
-
         # Create a thread with the method we called
         thread = CreateThread(1, str(func) + " thread", args[0], func)
         thread.start()
+
     return wrapped_f
 
 
 class RedditBot:
-
     """Class that implements a Reddit bot to perform moderator actions in a specific subreddit"""
 
     def __init__(self, db, load_side_threads=True, debug=False):
@@ -414,7 +412,7 @@ class RedditBot:
 
         return response.response_dict
 
-    def shadowban(self, split_text, author):
+    def shadowban(self, username, author):
 
         """*!shadowban [user] [reason]:* Shadowbans [user] and adds usernote [reason] - USERNAME IS CASE SENSITIVE!"""
 
@@ -423,48 +421,72 @@ class RedditBot:
 
         if author in self.usergroup_mod:
 
-            if len(split_text) >= 2:
+            wiki_page = r.get_wiki_page(self.subreddit_name, "config/automoderator")
+            wiki_page_content = wiki_page.content_md
 
-                wiki_page = r.get_wiki_page(self.subreddit_name, "config/automoderator")
-                wiki_page_content = wiki_page.content_md
+            beg_ind = wiki_page_content.find("shadowbans")
+            end_ind = wiki_page_content.find("#end shadowbans", beg_ind)
 
-                beg_ind = wiki_page_content.find("shadowbans")
-                end_ind = wiki_page_content.find("#end shadowbans", beg_ind)
-                username = split_text[0]
-                reason = ' '.join(split_text[1:])
+            try:
+                n = puni.Note(username, "Shadowbanned via RedditSlacker by Slack user '%s'" % author,
+                              username, '', 'botban')
 
-                try:
-                    n = puni.Note(username, "Shadowbanned, reason: %s" % reason, username, '', 'botban')
+                replacement = ', "%s"]' % username
 
-                    replacement = ', "%s"]' % username
+                newstr = wiki_page_content[:beg_ind] + \
+                         wiki_page_content[beg_ind:end_ind].replace("]", replacement) + \
+                         wiki_page_content[end_ind:]
 
-                    newstr = wiki_page_content[:beg_ind] + \
-                             wiki_page_content[beg_ind:end_ind].replace("]", replacement) + \
-                             wiki_page_content[end_ind:]
+                if not self.debug:
+                    r.edit_wiki_page(self.subreddit_name, "config/automoderator", newstr,
+                                     reason='RedditSlacker shadowban user "/u/%s" executed by Slack user "%s"'
+                                            % (username, author))
 
-                    if not self.debug:
+                    self.un.add_note(n)
 
-                        r.edit_wiki_page(self.subreddit_name, "config/automoderator", newstr,
-                                         reason='ELI5_ModBot shadowban user "/u/%s" executed by Slack user "%s"'
-                                                % (username, author))
+                response = utils.SlackResponse(text="User */u/%s* has been shadowbanned." % username)
+                field_b = utils.SlackField("Author", author)
+                response.add_attachment(fallback="Shadowbanned /u/" + username,
+                                        title="User profile",
+                                        title_link="https://www.reddit.com/user/" + username,
+                                        color='good',
+                                        fields=[field_b])
 
-                        self.un.add_note(n)
-
-                    response = utils.SlackResponse(text="User */u/%s* has been shadowbanned." % username)
-                    field_a = utils.SlackField("Reason", reason)
-                    field_b = utils.SlackField("Author", author)
-                    response.add_attachment(fallback="Shadowbanned /u/" + username,
-                                            title="User profile",
-                                            title_link="https://www.reddit.com/user/" + username,
-                                            color='good',
-                                            fields=[field_a, field_b])
-
-                except:
-                    response = utils.SlackResponse(text="Failed to shadowban user.")
-                    response.add_attachment(fallback="Shadowban fail",
-                                            title="Exception",
-                                            text=traceback.format_exc(),
-                                            color='danger')
+            except:
+                response = utils.SlackResponse(text="Failed to shadowban user.")
+                response.add_attachment(fallback="Shadowban fail",
+                                        title="Exception",
+                                        text=traceback.format_exc(),
+                                        color='danger')
 
         return response.response_dict
 
+    def unshadowban(self, username, author):
+
+        response = utils.SlackResponse(text="Failed to unshadowban user.")
+
+        if author in self.usergroup_mod:
+            wiki_page = self.r.get_wiki_page(self.subreddit_name, "config/automoderator")
+            wiki_page_content = wiki_page.content_md
+
+            wiki_page_content.replace(username, '')
+
+            try:
+                n = puni.Note(username, "Unshadowbanned via RedditSlacker by Slack user '%s'" % author,
+                              username, '', 'botban')
+
+                if not self.debug:
+                    self.r.edit_wiki_page(self.subreddit_name, "config/automoderator", wiki_page_content,
+                                          reason='RedditSlacker unshadowban user "/u/%s" executed by Slack user "%s"'
+                                                 % (username, author))
+
+                    self.un.add_note(n)
+
+                response = utils.SlackResponse(text="User */u/%s* has been unshadowbanned." % username)
+
+            except:
+                response.add_attachment(fallback="Unhadowban fail",
+                                        title="Exception",
+                                        text=traceback.format_exc(),
+                                        color='danger')
+        return response.response_dict
