@@ -38,30 +38,25 @@ class RequestsHandler:
         callback_id = request.callback_id
         button_pressed = request.actions[0]['value'].split('_')[0]
         target_user = '_'.join(request.actions[0]['value'].split('_')[1:])
+        status_type = request.actions[0]['value'].split('_')[0]
         author = request.user
 
         special_buttons = ["shadowban", "unshadowban"]
 
         if callback_id.startswith("user") and button_pressed not in special_buttons:
-            response = utils.SlackResponse(self.update_user_track(request))
+            response = utils.SlackResponse("Updated user status.")
+            self.reddit_bot.db.update_user_status(target_user, status_type)
 
         elif button_pressed == "shadowban":
             response = self.reddit_bot.shadowban(target_user, author)
-            self.reddit_bot.db.update_user_status(target_user, "shadowban")
+            self.reddit_bot.db.update_user_status(target_user, status_type)
 
         elif button_pressed == "unshadowban":
             response = self.reddit_bot.unshadowban(target_user, author)
-            self.reddit_bot.db.update_user_status(target_user, "unshadowban")
+            self.reddit_bot.db.update_user_status(target_user, status_type)
 
         return response
 
-    def update_user_track(self, request):
-
-        status_type = request.actions[0]['value'].split('_')[0]
-        username = '_'.join(request.actions[0]['value'].split('_')[1:])
-        self.reddit_bot.db.update_user_status(username, status_type)
-
-        return "Updated user status."
 
 
 
