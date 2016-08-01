@@ -1,10 +1,9 @@
-from flask import Flask, request, Response, redirect
-from flask_sslify import SSLify
-import reddit_interface.commands_handler as commands_handler
-import reddit_interface.utils as utils
-import requests
 import os
-import json
+import requests
+from flask import Flask, request, Response
+from flask_sslify import SSLify
+import reddit_interface.utils as utils
+import webapp.requests_handler as commands_handler
 
 APP_SECRET_KEY = utils.get_token("FLASK_APP_SECRET_KEY")
 SLACK_APP_ID = utils.get_token("SLACK_APP_ID")
