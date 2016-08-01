@@ -41,7 +41,7 @@ class SlackField:
 class SlackAttachment:
 
     def __init__(self, title=None, text=None, fallback=None, callback_id=None, color=None, title_link=None,
-                 image_url=None):
+                 image_url=None, footer=None):
 
         self.attachment_dict = dict()
 
@@ -59,6 +59,10 @@ class SlackAttachment:
             self.attachment_dict['title'] = title
         if text is not None:
             self.attachment_dict['text'] = text
+        if footer is not None:
+            self.attachment_dict['footer'] = footer
+
+        self.attachment_dict['mrkdwn_in'] = ['text']
 
     def add_field(self, title, value, short="true"):
 
@@ -90,14 +94,14 @@ class SlackResponse:
         self.response_dict['response_type'] = response_type
 
     def add_attachment(self, title=None, text=None, fallback=None, callback_id=None, color=None,
-                       title_link=None,
+                       title_link=None, footer=None,
                        image_url=None):
 
         if 'attachments' not in self.response_dict:
             self.response_dict['attachments'] = []
 
         attachment = SlackAttachment(title=title, text=text, fallback=fallback, callback_id=callback_id, color=color,
-                                     title_link=title_link, image_url=image_url)
+                                     title_link=title_link, image_url=image_url, footer=footer)
 
         self.attachments.append(attachment)
 
@@ -134,6 +138,19 @@ class SlackResponse:
 
         return request_response
 
+    def update_message(self, timestamp, channel, parse='full'):
+
+        response_dict = self.get_dict()
+        response_dict['attachments'] = json.dumps(self.response_dict['attachments'])
+        response_dict['channel'] = channel
+        response_dict['token'] = SLACK_BOT_TOKEN
+        response_dict['ts'] = timestamp
+        response_dict['as_user'] = 'true'
+        response_dict['parse'] = parse
+
+        request_response = requests.post('https://slack.com/api/chat.update',
+                                         params=response_dict)
+
 
 class SlackRequest:
 
@@ -151,9 +168,12 @@ class SlackRequest:
             self.request_type = "button"
             self.form = json.loads(dict(self.form)['payload'][0])
             self.user = self.form['user']['name']
+            self.user_id = self.form['user']['id']
             self.team_domain = self.form['team']['domain']
             self.callback_id = self.form['callback_id']
             self.actions = self.form['actions']
+            self.message_ts = self.form['message_ts']
+            self.original_message = self.form['original_message']
         else:
             self.user = self.form['user_name']
             self.team_domain = self.form['team_domain']

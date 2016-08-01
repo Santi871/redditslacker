@@ -10,8 +10,7 @@ class RequestsHandler:
         self.reddit_bot = bot.RedditBot(self.db)
 
     def command_response(self, request):
-        response = utils.SlackResponse(text="Processing your request... please allow a few seconds.",
-                                       response_type='ephemeral')
+        response = utils.SlackResponse(text="Processing your request... please allow a few seconds.")
 
         if request.command == '/summary':
 
@@ -45,7 +44,7 @@ class RequestsHandler:
         status_type = request.actions[0]['value'].split('_')[0]
         author = request.user
 
-        special_buttons = ["shadowban", "unshadowban", "track", "untrack"]
+        special_buttons = ["shadowban", "unshadowban", "track", "untrack", 'verify']
 
         if callback_id.startswith("user") and button_pressed not in special_buttons:
             response = utils.SlackResponse(text="Updated user status.")
@@ -68,6 +67,15 @@ class RequestsHandler:
         elif button_pressed == "unshadowban":
             response = self.reddit_bot.unshadowban(target_user, author)
             self.reddit_bot.db.update_user_status(target_user, status_type)
+
+        elif button_pressed == "verify":
+            attachment_text = request.original_message['attachments'][0]['text']
+            attachment_title = request.original_message['attachments'][0]['title']
+            attachment_title_link = request.original_message['attachments'][0]['title_link']
+
+            response = utils.SlackResponse()
+            response.add_attachment(text=attachment_text, title=attachment_title, title_link=attachment_title_link,
+                                    color='danger', footer="Verified by @%s" % author)
 
         return response
 

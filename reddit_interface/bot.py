@@ -112,12 +112,12 @@ class RedditBot:
                         self.r._use_oauth = False
                         response.add_attachment(text=comment.body,
                                                 color="#0073a3", title=comment.submission.title,
-                                                title_link=comment.permalink)
+                                                title_link=comment.permalink, callback_id="tlcfeed")
                         response.attachments[0].add_field("Author", comment.author.name)
                         response.attachments[0].add_button("Approve", "approve_" + comment.id, style="primary")
                         response.attachments[0].add_button("Remove", "remove_" + comment.id, style="danger")
 
-                        response.post_to_channel('#tlc_feed')
+                        slack_response = response.post_to_channel('#tlc-feed')
 
                     if comment.author.name.lower() in tracked_users:
                         response = utils.SlackResponse(text="New comment by user /u/" + comment.author.name)
@@ -145,40 +145,53 @@ class RedditBot:
             already_done_user = []
 
             for item in modlog:
-                if item.id not in self.already_done and item.target_author not in ignored_users\
-                        and item.target_author not in already_done_user:
+                if item.id not in self.already_done and item.target_author not in ignored_users:
                     user_dict = self.db.handle_mod_log(item)
 
-                    if user_dict['comment_removals'] > 2:
-                        response = utils.SlackResponse()
-                        response.add_attachment(title="Warning regarding user /u/" + user_dict['username'],
-                                                title_link="https://www.reddit.com/user/" + user_dict['username'],
-                                                text="User has had 3> comments removed. Please check profile history.",
-                                                color='danger')
+                    if item.target_author not in already_done_user:
 
-                        response.post_to_channel('#rs_feed')
+                        done = False
+                        if user_dict['comment_removals'] > 2:
+                            response = utils.SlackResponse()
+                            response.add_attachment(title="Warning regarding user /u/" + user_dict['username'],
+                                                    title_link="https://www.reddit.com/user/" + user_dict['username'],
+                                                    text="User has had 3> comments removed. "
+                                                         "Please check profile history.",
+                                                    color='danger', callback_id="userwarning")
+                            response.attachments[0].add_button("Verify", value="verify", style='primary')
 
-                    if user_dict['link_removals'] > 1:
-                        response = utils.SlackResponse()
-                        response.add_attachment(title="Warning regarding user /u/" + user_dict['username'],
-                                                title_link="https://www.reddit.com/user/" + user_dict['username'],
-                                                text="User has had 2> submissions removed. Please check profile"
-                                                     " history.",
-                                                color='danger')
+                            response.post_to_channel('#rs_feed')
 
-                        response.post_to_channel('#rs_feed')
+                            done = True
 
-                    if user_dict['bans'] > 1:
+                        if user_dict['link_removals'] > 1:
+                            response = utils.SlackResponse()
+                            response.add_attachment(title="Warning regarding user /u/" + user_dict['username'],
+                                                    title_link="https://www.reddit.com/user/" + user_dict['username'],
+                                                    text="User has had 2> submissions removed. Please check profile"
+                                                         " history.",
+                                                    color='danger', callback_id="userwarning")
+                            response.attachments[0].add_button("Verify", value="verify")
 
-                        response = utils.SlackResponse()
-                        response.add_attachment(title="Warning regarding user /u/" + user_dict['username'],
-                                                title_link="https://www.reddit.com/user/" + user_dict['username'],
-                                                text="User has been banned 2> times. Please check profile history.",
-                                                color='danger')
+                            response.post_to_channel('#rs_feed')
 
-                        response.post_to_channel('#rs_feed')
+                            done = True
 
-                    already_done_user.append(user_dict['username'])
+                        if user_dict['bans'] > 1:
+
+                            response = utils.SlackResponse()
+                            response.add_attachment(title="Warning regarding user /u/" + user_dict['username'],
+                                                    title_link="https://www.reddit.com/user/" + user_dict['username'],
+                                                    text="User has been banned 2> times. Please check profile history.",
+                                                    color='danger', callback_id="userwarning")
+                            response.attachments[0].add_button("Verify", value="verify", style='primary')
+
+                            response.post_to_channel('#rs_feed')
+
+                            done = True
+
+                        if done:
+                            already_done_user.append(user_dict['username'])
 
                     self.already_done.append(item.id)
 
