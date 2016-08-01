@@ -101,6 +101,7 @@ class RedditSlackerDatabase:
 
         if user_track is None:
             track_info = ("No record", "No record", "No record", "No", "No", "No")
+            return track_info
         else:
             if user_track[5]:
                 is_permamuted = "Yes"

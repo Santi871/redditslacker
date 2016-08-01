@@ -7,7 +7,6 @@ import math
 import numpy as np
 from time import sleep
 import os
-import requests
 import reddit_interface.utils as utils
 import reddit_interface.bot_threading as bot_threading
 import traceback
@@ -44,9 +43,8 @@ class RedditBot:
 
         self.already_done = self.fetch_already_done("already_done.txt")
 
-        # self.hello()
         if load_side_threads:
-            self.new_comments_stream()
+            self.comments_feed()
             self.track_users()
             self.monitor_modmail()
 
@@ -54,11 +52,6 @@ class RedditBot:
         o = OAuth2Util.OAuth2Util(self.r)
         o.refresh(force=True)
         self.r.config.api_request_delay = 1
-
-    @staticmethod
-    def hello():
-        data = {'token': SLACK_BOT_TOKEN, 'channel': '#random', 'text': 'waw', 'as_user': 'false'}
-        requests.post('https://slack.com/api/chat.postMessage', params=data)
 
     @staticmethod
     def fetch_already_done(filename):
@@ -80,30 +73,53 @@ class RedditBot:
         else:
             return str(notes[0].note)
 
+    def add_note(self, username, author, note_type):
+
+        n = puni.Note(username, "Permamuted via RedditSlacker by Slack user '%s'" % author,
+                      username, '', note_type)
+        self.un.add_note(n)
+
+    def get_user_name(self, username):
+        redditor = self.r.get_redditor(username)
+
+        return redditor.name
+
     @bot_threading.own_thread
-    def new_comments_stream(self):
+    def comments_feed(self):
 
         while True:
+
+            tracked_users = [track[1] for track in self.db.fetch_tracks("tracked")]
 
             self.r._use_oauth = False
             comments = self.r.get_subreddit(self.subreddit_name).get_comments(limit=100, sort='new')
 
             for comment in comments:
-                if comment.is_root and comment.author.name != "ELI5_BotMod" and comment.id not in self.already_done:
 
-                    response = utils.SlackResponse(token=SLACK_BOT_TOKEN, channel="#tlc-feed")
-                    response.add_attachment(text=comment.body,
-                                            color="#0073a3", title_link=comment.permalink)
-                    response.attachments[0].add_field("Author", comment.author.name)
-                    self.r._use_oauth = False
-                    response.attachments[0].add_field("Question", comment.submission.title)
+                if comment.id not in self.already_done:
+                    if comment.is_root and comment.author.name != "ELI5_BotMod"\
+                            and comment.author.name != 'AutoModerator':
 
-                    response.attachments[0].add_button("Remove", "remove_" + comment.id, style="danger")
+                        response = utils.SlackResponse()
 
-                    request_response = requests.post('https://slack.com/api/chat.postMessage',
-                                                     params=response.response_dict)
+                        self.r._use_oauth = False
+                        response.add_attachment(text=comment.body,
+                                                color="#0073a3", title=comment.submission.title,
+                                                title_link=comment.permalink)
+                        response.attachments[0].add_field("Author", comment.author.name)
+                        response.attachments[0].add_button("Approve", "approve_" + comment.id, style="primary")
+                        response.attachments[0].add_button("Remove", "remove_" + comment.id, style="danger")
 
-                    print(str(request_response))
+                        response.post_to_channel('#tlc_feed')
+
+                    if comment.author.name.lower() in tracked_users:
+                        response = utils.SlackResponse(text="New comment by user /u/" + comment.author.name)
+
+                        self.r._use_oauth = False
+                        response.add_attachment(title=comment.submission.title, title_link=comment.permalink,
+                                                text=comment.body, color="#warning")
+
+                        response.post_to_channel('#rs_feed')
 
                     self.already_done.append(comment.id)
 
@@ -114,14 +130,45 @@ class RedditBot:
     @bot_threading.own_thread
     def track_users(self):
         subreddit = self.r.get_subreddit(self.subreddit_name)
+        ignored_users = ['ELI5_BotMod', 'AutoModerator']
 
         while True:
             self.r._use_oauth = False
             modlog = subreddit.get_mod_log(limit=100)
 
             for item in modlog:
-                if item.id not in self.already_done:
+                if item.id not in self.already_done and item.target_author not in ignored_users:
                     user_dict = self.db.handle_mod_log(item)
+
+                    if user_dict['comment_removals'] > 2:
+                        response = utils.SlackResponse(text="@channel")
+                        response.add_attachment(title="Warning regarding user /u/" + user_dict['username'],
+                                                title_link="https://www.reddit.com/user/" + user_dict['username'],
+                                                text="User has had 3> comments removed. Please check profile history.",
+                                                color='danger')
+
+                        response.post_to_channel('#rs_feed')
+
+                    if user_dict['link_removals'] > 1:
+                        response = utils.SlackResponse(text="@channel")
+                        response.add_attachment(title="Warning regarding user /u/" + user_dict['username'],
+                                                title_link="https://www.reddit.com/user/" + user_dict['username'],
+                                                text="User has had 2> submissions removed. Please check profile"
+                                                     " history.",
+                                                color='danger')
+
+                        response.post_to_channel('#rs_feed')
+
+                    if user_dict['bans'] > 1:
+
+                        response = utils.SlackResponse(text="@channel")
+                        response.add_attachment(title="Warning regarding user /u/" + user_dict['username'],
+                                                title_link="https://www.reddit.com/user/" + user_dict['username'],
+                                                text="User has been banned 2> times. Please check profile history.",
+                                                color='danger')
+
+                        response.post_to_channel('#rs_feed')
+
                     self.already_done.append(item.id)
 
                     with open("already_done.txt", "a") as text_file:
@@ -149,12 +196,27 @@ class RedditBot:
                         print(item.id + ",", end="", file=text_file)
             sleep(120)
 
+    @staticmethod
+    def remove_from_file(filename, str_to_remove):
+
+        with open(filename, "r") as text_file:
+            file_data = text_file.read().split(',')
+
+        try:
+            file_data.remove(str_to_remove)
+        except ValueError:
+            pass
+
+        with open(filename, "w") as text_file:
+            text_file.write(','.join(file_data))
+
     @bot_threading.own_thread
     def handle_unflaired(self):
 
         r = self.r
-        unflaired_submissions_ids = []
-        unflaired_submissions = []
+        submission_ids = self.fetch_already_done("unflaired_submissions.txt")
+        unflaired_submissions = utils.get_unflaired_submissions(r, submission_ids)
+        tracked_users = [track[1] for track in self.db.fetch_tracks("tracked")]
 
         while True:
 
@@ -164,53 +226,49 @@ class RedditBot:
 
                 for submission in submissions:
 
+                    if submission.author.name in tracked_users and submission.id not in self.already_done:
+                        response = utils.SlackResponse(text="New submission by user /u/" + submission.author.name)
+
+                        self.r._use_oauth = False
+                        response.add_attachment(title=submission.title, title_link=submission.permalink,
+                                                text=submission.body, color="#warning")
+
+                        response.post_to_channel('#rs_feed')
+                        self.already_done.append(submission.id)
+
+                        with open("already_done.txt", "a") as text_file:
+                            print(submission.id + ",", end="", file=text_file)
+
                     if submission.created > highest_timestamp.timestamp() and \
-                                    submission.id not in unflaired_submissions_ids and \
                                     submission.link_flair_text is None:
                         submission.remove()
 
                         s1 = submission.author
                         s2 = 'https://www.reddit.com/message/compose/?to=/r/explainlikeimfive'
                         s3 = submission.permalink
-                        comment = ("""Hi /u/%s,
 
-It looks like you haven't assigned a category flair to your question, so it has been automatically removed.
-You can assign a category flair to your question by clicking the *flair* button under it.
+                        comment = utils.generate_flair_comment(s1, s2, s3)
 
-Shortly after you have assigned a category flair to your question, it will be automatically re-approved and
- this message
-will be deleted.
-
-**Mobile users:** some reddit apps don't support flair selection (including the official one). In order to
- flair your
-question, open it in your phone's web browser by clicking [this link](%s) and select
-flair as you would in a desktop computer.
-
----
-
-*I am a bot, and this action was performed automatically.
-Please [contact the moderators](%s) if you have any questions or concerns*
-""") % (s1, s3, s2)
                         comment_obj = submission.add_comment(comment)
                         comment_obj.distinguish(sticky=True)
-                        unflaired_submissions_ids.append(submission.id)
-                        unflaired_submissions.append((submission.id, comment_obj.fullname))
 
-                unflaired_submissions_duplicate = copy.deepcopy(unflaired_submissions)
+                        unflaired_submission = utils.UnflairedSubmission(submission, comment)
 
-                for submission_tuple in unflaired_submissions_duplicate:
+                        unflaired_submissions.append(unflaired_submission)
 
-                    refreshed_submission = r.get_submission(submission_id=submission_tuple[0])
+                        with open("unflaired_submissions.txt", "a") as text_file:
+                            print(submission.id + ",", end="", file=text_file)
 
-                    comment_obj = r.get_info(thing_id=submission_tuple[1])
+                for submission_object in unflaired_submissions:
+
+                    refreshed_submission = r.get_submission(submission_id=submission_object.submission.id)
 
                     if refreshed_submission.link_flair_text is not None:
                         refreshed_submission.approve()
 
-                        comment_obj.remove()
-
-                        unflaired_submissions.remove(submission_tuple)
-                        unflaired_submissions_ids.remove(submission_tuple[0])
+                        submission_object.comment.delete()
+                        unflaired_submissions.remove(submission_object)
+                        self.remove_from_file("unflaired_submissions.txt", submission_object.id)
 
                     else:
 
@@ -219,9 +277,8 @@ Please [contact the moderators](%s) if you have any questions or concerns*
                         delta_time = d.total_seconds()
 
                         if delta_time >= 10800:
-                            unflaired_submissions.remove(submission_tuple)
-                            unflaired_submissions_ids.remove(submission_tuple[0])
-                            comment_obj.remove()
+                            unflaired_submissions.remove(submission_object)
+                            submission_object.comment.delete()
 
             except:
                 print("--------------\nUnexpected exception.\n--------------")
@@ -241,175 +298,188 @@ Please [contact the moderators](%s) if you have any questions or concerns*
 
         username = kwargs['username']
         request = kwargs['request']
-        limit = 500
-        i = 0
-        total_comments = 0
-        color = 'good'
-        subreddit_names = []
-        subreddit_total = []
-        ordered_subreddit_names = []
-        comments_in_subreddit = []
-        ordered_comments_in_subreddit = []
-        comment_lengths = []
-        history = {}
-        total_karma = 0
-        troll_index = 0
-        troll_likelihood = "Low"
-        blacklisted_subreddits = ('theredpill', 'rage', 'atheism', 'conspiracy', 'the_donald', 'subredditcancer',
-                                  'SRSsucks', 'drama', 'undelete', 'blackout2015', 'oppression', 'kotakuinaction',
-                                  'tumblrinaction', 'offensivespeech', 'bixnood')
-        total_negative_karma = 0
+        no_summary = kwargs['no_summary']
+
+        if no_summary == "nosummary":
+            no_summary = True
+        else:
+            no_summary = False
 
         user_status = self.db.fetch_user_log(username)
+        troll_likelihood = "Low"
+        total_comments_read = 0
+        color = 'good'
+        link = None
 
         try:
             user = self.r.get_redditor(username, fetch=True)
         except praw.errors.NotFound:
             response = utils.SlackResponse()
             response.add_attachment(fallback="Summary error.", title="Error: user not found.", color='danger')
-            return response.response_dict
+            return request.delayed_response(response)
 
-        x = []
-        y = []
-        s = []
+        if not no_summary:
+            limit = 500
+            i = 0
+            total_comments = 0
+            subreddit_names = []
+            subreddit_total = []
+            ordered_subreddit_names = []
+            comments_in_subreddit = []
+            ordered_comments_in_subreddit = []
+            comment_lengths = []
+            history = {}
+            total_karma = 0
+            troll_index = 0
+            blacklisted_subreddits = ('theredpill', 'rage', 'atheism', 'conspiracy', 'the_donald', 'subredditcancer',
+                                      'SRSsucks', 'drama', 'undelete', 'blackout2015', 'oppression', 'kotakuinaction',
+                                      'tumblrinaction', 'offensivespeech', 'bixnood')
+            total_negative_karma = 0
 
-        karma_accumulator = 0
-        karma_accumulated = []
-        karma_accumulated_total = []
+            x = []
+            y = []
+            s = []
 
-        self.r._use_oauth = False
-        for comment in user.get_comments(limit=limit):
+            karma_accumulator = 0
+            karma_accumulated = []
+            karma_accumulated_total = []
 
-            displayname = comment.subreddit.display_name
+            self.r._use_oauth = False
+            for comment in user.get_comments(limit=limit):
 
-            if displayname not in subreddit_names:
-                subreddit_names.append(displayname)
+                displayname = comment.subreddit.display_name
 
-            subreddit_total.append(displayname)
+                if displayname not in subreddit_names:
+                    subreddit_names.append(displayname)
 
-            total_karma = total_karma + comment.score
+                subreddit_total.append(displayname)
 
-            x.append(datetime.datetime.utcfromtimestamp(float(comment.created_utc)))
-            y.append(comment.score)
-            comment_lengths.append(len(comment.body.split()))
+                total_karma = total_karma + comment.score
 
-            if comment.score < 0:
-                total_negative_karma += comment.score
+                x.append(datetime.datetime.utcfromtimestamp(float(comment.created_utc)))
+                y.append(comment.score)
+                comment_lengths.append(len(comment.body.split()))
 
-            if len(comment.body) < 200:
-                troll_index += 0.1
+                if comment.score < 0:
+                    total_negative_karma += comment.score
 
-            if displayname in blacklisted_subreddits:
-                troll_index += 2.5
+                if len(comment.body) < 200:
+                    troll_index += 0.1
 
-            i += 1
+                if displayname in blacklisted_subreddits:
+                    troll_index += 2.5
 
-        total_comments_read = i
+                i += 1
 
-        if not total_comments_read:
-            response = utils.SlackResponse()
-            response.add_attachment(fallback="Summary for /u/" + username, text="Summary error: user has no comments.",
-                                    color='danger')
+            total_comments_read = i
 
-            return response.response_dict
+            if not total_comments_read:
+                response = utils.SlackResponse()
+                response.add_attachment(fallback="Summary for /u/" + username,
+                                        text="Summary error: user has no comments.",
+                                        color='danger')
 
-        troll_index *= limit / total_comments_read
+                return response.response_dict
 
-        average_karma = np.mean(y)
+            troll_index *= limit / total_comments_read
 
-        if average_karma >= 5 and total_negative_karma > (-70 * (total_comments_read / limit)) and troll_index < 50:
-            troll_likelihood = 'Low'
-            color = 'good'
+            average_karma = np.mean(y)
 
-        if troll_index >= 40 or total_negative_karma < (-70 * (total_comments_read / limit)) or average_karma < 1:
-            troll_likelihood = 'Moderate'
-            color = 'warning'
+            if average_karma >= 5 and total_negative_karma > (-70 * (total_comments_read / limit)) and troll_index < 50:
+                troll_likelihood = 'Low'
+                color = 'good'
 
-        if troll_index >= 60 or total_negative_karma < (-130 * (total_comments_read / limit)) or average_karma < -2:
-            troll_likelihood = 'High'
-            color = 'danger'
+            if troll_index >= 40 or total_negative_karma < (-70 * (total_comments_read / limit)) or average_karma < 1:
+                troll_likelihood = 'Moderate'
+                color = 'warning'
 
-        if troll_index >= 80 or total_negative_karma < (-180 * (total_comments_read / limit)) or average_karma < -5:
-            troll_likelihood = 'Very high'
-            color = 'danger'
+            if troll_index >= 60 or total_negative_karma < (-130 * (total_comments_read / limit)) or average_karma < -2:
+                troll_likelihood = 'High'
+                color = 'danger'
 
-        if troll_index >= 100 or total_negative_karma < (-200 * (total_comments_read / limit)) or average_karma < -10:
-            troll_likelihood = 'Extremely high'
-            color = 'danger'
+            if troll_index >= 80 or total_negative_karma < (-180 * (total_comments_read / limit)) or average_karma < -5:
+                troll_likelihood = 'Very high'
+                color = 'danger'
 
-        for subreddit in subreddit_names:
-            i = subreddit_total.count(subreddit)
-            comments_in_subreddit.append(i)
-            total_comments += i
+            if troll_index >= 100 or total_negative_karma < (-200 * (total_comments_read / limit))\
+                    or average_karma < -10:
+                troll_likelihood = 'Extremely high'
+                color = 'danger'
 
-        i = 0
+            for subreddit in subreddit_names:
+                i = subreddit_total.count(subreddit)
+                comments_in_subreddit.append(i)
+                total_comments += i
 
-        for subreddit in subreddit_names:
+            i = 0
 
-            if comments_in_subreddit[i] > (total_comments_read / (20 * (limit / 200)) / (len(subreddit_names) / 30)):
-                history[subreddit] = comments_in_subreddit[i]
+            for subreddit in subreddit_names:
 
-            i += 1
+                if comments_in_subreddit[i] > (total_comments_read / (20 * (limit / 200)) /
+                                                   (len(subreddit_names) / 30)):
+                    history[subreddit] = comments_in_subreddit[i]
 
-        old_range = 700 - 50
-        new_range = 2000 - 50
+                i += 1
 
-        for item in comment_lengths:
-            n = (((item - 50) * new_range) / old_range) + 50
-            s.append(n)
+            old_range = 700 - 50
+            new_range = 2000 - 50
 
-        history_tuples = sorted(history.items(), key=lambda xa: x[1])
+            for item in comment_lengths:
+                n = (((item - 50) * new_range) / old_range) + 50
+                s.append(n)
 
-        for each_tuple in history_tuples:
-            ordered_subreddit_names.append(each_tuple[0])
-            ordered_comments_in_subreddit.append(each_tuple[1])
+            history_tuples = sorted(history.items(), key=lambda xa: x[1])
 
-        user_karma_atstart = user.comment_karma - math.fabs((np.mean(y) * total_comments_read))
+            for each_tuple in history_tuples:
+                ordered_subreddit_names.append(each_tuple[0])
+                ordered_comments_in_subreddit.append(each_tuple[1])
 
-        for item in list(reversed(y)):
-            karma_accumulator += item
-            karma_accumulated.append(karma_accumulator)
+            user_karma_atstart = user.comment_karma - math.fabs((np.mean(y) * total_comments_read))
 
-        for item in karma_accumulated:
-            karma_accumulated_total.append(user_karma_atstart + item)
+            for item in list(reversed(y)):
+                karma_accumulator += item
+                karma_accumulated.append(karma_accumulator)
 
-        plt.style.use('ggplot')
-        labels = ordered_subreddit_names
-        sizes = ordered_comments_in_subreddit
-        colors = ['yellowgreen', 'gold', 'lightskyblue', 'lightcoral', 'teal', 'chocolate', 'olivedrab', 'tan']
-        plt.subplot(3, 1, 1)
-        plt.rcParams['font.size'] = 8
-        plt.pie(sizes, labels=labels, colors=colors,
-                autopct=None, startangle=90)
-        plt.axis('equal')
-        plt.title('User summary for /u/' + username, loc='center', y=1.2)
+            for item in karma_accumulated:
+                karma_accumulated_total.append(user_karma_atstart + item)
 
-        ax1 = plt.subplot(3, 1, 2)
-        x_inv = list(reversed(x))
-        plt.rcParams['font.size'] = 10
-        plt.scatter(x, y, c=y, vmin=-50, vmax=50, s=s, cmap='RdYlGn')
-        ax1.set_xlim(x_inv[0], x_inv[total_comments_read - 1])
-        ax1.axhline(y=average_karma, xmin=0, xmax=1, c="lightskyblue", linewidth=2, zorder=4)
-        plt.ylabel('Karma of comment')
+            plt.style.use('ggplot')
+            labels = ordered_subreddit_names
+            sizes = ordered_comments_in_subreddit
+            colors = ['yellowgreen', 'gold', 'lightskyblue', 'lightcoral', 'teal', 'chocolate', 'olivedrab', 'tan']
+            plt.subplot(3, 1, 1)
+            plt.rcParams['font.size'] = 8
+            plt.pie(sizes, labels=labels, colors=colors,
+                    autopct=None, startangle=90)
+            plt.axis('equal')
+            plt.title('User summary for /u/' + user.name, loc='center', y=1.2)
 
-        ax2 = plt.subplot(3, 1, 3)
-        plt.plot_date(x, list(reversed(karma_accumulated_total)), '-r')
-        plt.xlabel('Comment date')
-        plt.ylabel('Total comment karma')
+            ax1 = plt.subplot(3, 1, 2)
+            x_inv = list(reversed(x))
+            plt.rcParams['font.size'] = 10
+            plt.scatter(x, y, c=y, vmin=-50, vmax=50, s=s, cmap='RdYlGn')
+            ax1.set_xlim(x_inv[0], x_inv[total_comments_read - 1])
+            ax1.axhline(y=average_karma, xmin=0, xmax=1, c="lightskyblue", linewidth=2, zorder=4)
+            plt.ylabel('Karma of comment')
 
-        filename = username + "_summary.png"
+            ax2 = plt.subplot(3, 1, 3)
+            plt.plot_date(x, list(reversed(karma_accumulated_total)), '-r')
+            plt.xlabel('Comment date')
+            plt.ylabel('Total comment karma')
 
-        figure = plt.gcf()
-        figure.set_size_inches(11, 12)
+            filename = username + "_summary.png"
 
-        plt.savefig(filename)
+            figure = plt.gcf()
+            figure.set_size_inches(11, 12)
 
-        path = os.getcwd() + "\\" + filename
+            plt.savefig(filename)
 
-        link = self.imgur.upload_from_path(path, config=None, anon=True)
-        os.remove(path)
+            path = os.getcwd() + "\\" + filename
 
-        plt.clf()
+            link = self.imgur.upload_from_path(path, config=None, anon=True)
+            os.remove(path)
+
+            plt.clf()
 
         comment_removals = user_status[0]
         link_removals = user_status[1]
@@ -422,7 +492,7 @@ Please [contact the moderators](%s) if you have any questions or concerns*
         last_note = self.get_last_note(username)
 
         response = utils.SlackResponse()
-        response.add_attachment(title='Summary for /u/' + username,
+        response.add_attachment(title='Summary for /u/' + user.name,
                                 title_link="https://www.reddit.com/user/" + username,
                                 color='#3AA3E3', callback_id='user_' + username)
 
@@ -451,12 +521,11 @@ Please [contact the moderators](%s) if you have any questions or concerns*
         else:
             response.attachments[0].add_button("Shadowban", "shadowban_" + username, style='danger')
 
-        response.attachments[0].add_button("Ban", "ban_" + username, style='danger')
-
-        response.add_attachment(fallback="Summary for /u/" + username, image_url=link['link'],
-                                color=color)
-        response.attachments[1].add_field("Troll likelihood", troll_likelihood)
-        response.attachments[1].add_field("Total comments read", total_comments_read)
+        if not no_summary:
+            response.add_attachment(fallback="Summary for /u/" + username, image_url=link['link'],
+                                    color=color)
+            response.attachments[1].add_field("Troll likelihood", troll_likelihood)
+            response.attachments[1].add_field("Total comments read", total_comments_read)
 
         if request is not None:
             response = request.delayed_response(response)

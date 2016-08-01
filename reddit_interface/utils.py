@@ -1,6 +1,7 @@
 import json
 import configparser
 import requests
+import praw.helpers
 
 
 def get_token(token_name, config_name='tokens.ini'):
@@ -11,6 +12,7 @@ def get_token(token_name, config_name='tokens.ini'):
     return token
 
 SLACK_SLASHCMDS_SECRET = get_token("SLACK_SLASHCMDS_SECRET")
+SLACK_BOT_TOKEN = get_token('SLACK_BOT_TOKEN')
 
 
 class SlackButton:
@@ -77,21 +79,15 @@ class SlackAttachment:
 
 class SlackResponse:
 
-    def __init__(self, token=None, channel=None, text=None, response_type="in_channel"):
+    def __init__(self, text=None, response_type="in_channel"):
         self.response_dict = dict()
         self.attachments = []
-        self.token = token
+        self._is_prepared = False
 
         if text is not None:
             self.response_dict['text'] = text
 
-        if token is None:
-            self.response_dict['response_type'] = response_type
-
-        if token is not None:
-            self.response_dict['token'] = token
-            self.response_dict['as_user'] = 'false'
-            self.response_dict['channel'] = channel
+        self.response_dict['response_type'] = response_type
 
     def add_attachment(self, title=None, text=None, fallback=None, callback_id=None, color=None,
                        title_link=None,
@@ -105,14 +101,38 @@ class SlackResponse:
 
         self.attachments.append(attachment)
 
-    def get_json(self):
+    def _prepare(self):
         for attachment in self.attachments:
             self.response_dict['attachments'].append(attachment.attachment_dict)
 
-        if self.token is not None:
-            self.response_dict['attachments'] = json.dumps(self.response_dict['attachments'])
+        self._is_prepared = True
 
-        return json.dumps(self.response_dict, indent=4)
+    def get_json(self):
+        if not self._is_prepared:
+            self._prepare()
+
+        return json.dumps(self.response_dict)
+
+    def get_dict(self):
+        if not self._is_prepared:
+            self._prepare()
+
+        return self.response_dict
+
+    def post_to_channel(self, channel, as_user=False):
+
+        response_dict = self.get_dict()
+        response_dict['attachments'] = json.dumps(self.response_dict['attachments'])
+        response_dict['channel'] = channel
+        response_dict['token'] = SLACK_BOT_TOKEN
+
+        if as_user:
+            response_dict['as_user'] = 'true'
+
+        request_response = requests.post('https://slack.com/api/chat.postMessage',
+                                         params=response_dict)
+
+        return request_response
 
 
 class SlackRequest:
@@ -156,6 +176,55 @@ class SlackRequest:
         slack_response = requests.post(self.response_url, data=response, headers=headers)
 
         return slack_response
+
+
+class UnflairedSubmission:
+
+    def __init__(self, submission, comment):
+        self.submission = submission
+        self.comment = comment
+
+
+def get_unflaired_submissions(r, submission_ids):
+
+    unflaired_submissions = []
+
+    for submission_id in submission_ids:
+        submission = r.get_submission(submission_id=submission_id)
+        flat_comments = praw.helpers.flatten_tree(submission.comments)
+
+        for comment in flat_comments:
+            if comment.author.name.lower() == 'eli5_botmod':
+                unflaired_submission = UnflairedSubmission(submission, comment)
+                unflaired_submissions.append(unflaired_submission)
+                break
+
+    return unflaired_submissions
+
+
+def generate_flair_comment(s1, s2, s3):
+    comment = ("""Hi /u/%s,
+
+It looks like you haven't assigned a category flair to your question, so it has been automatically removed.
+You can assign a category flair to your question by clicking the *flair* button under it.
+
+Shortly after you have assigned a category flair to your question, it will be automatically re-approved and
+ this message
+will be deleted.
+
+**Mobile users:** some reddit apps don't support flair selection (including the official one). In order to
+ flair your
+question, open it in your phone's web browser by clicking [this link](%s) and select
+flair as you would in a desktop computer.
+
+---
+
+*I am a bot, and this action was performed automatically.
+Please [contact the moderators](%s) if you have any questions or concerns*
+""") % (s1, s3, s2)
+
+    return comment
+
 
 
 

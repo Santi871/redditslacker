@@ -24,9 +24,12 @@ class RequestsHandler:
 
         elif request.command == '/user':
 
-            if len(request.text.split()) == 1:
-                username = request.text
-                self.reddit_bot.summary(username=username, request=request)
+            if len(request.text.split()) > 1:
+                username = request.text.split()[0]
+                no_summary = None
+                if len(request.text.split()) == 2:
+                    no_summary = request.text.split()[1]
+                self.reddit_bot.summary(username=username, request=request, no_summary=no_summary)
 
             else:
                 response = utils.SlackResponse("Usage: /user [username].")
@@ -39,13 +42,23 @@ class RequestsHandler:
                                        response_type='ephemeral')
         callback_id = request.callback_id
         button_pressed = request.actions[0]['value'].split('_')[0]
-        target_user = '_'.join(request.actions[0]['value'].split('_')[1:])
+        target_user = '_'.join(request.actions[0]['value'].split('_')[1:]).lower()
         status_type = request.actions[0]['value'].split('_')[0]
         author = request.user
 
-        special_buttons = ["shadowban", "unshadowban"]
+        special_buttons = ["shadowban", "unshadowban", "track", "untrack"]
 
         if callback_id.startswith("user") and button_pressed not in special_buttons:
+            response = utils.SlackResponse(text="Updated user status.")
+            self.reddit_bot.db.update_user_status(target_user, status_type)
+
+        elif button_pressed == "track":
+            response = utils.SlackResponse(text="Updated user status.")
+            self.reddit_bot.db.update_user_status(target_user, status_type)
+
+            with open("tracked_users.txt", "a+") as text_file:
+                print(target_user + ",", file=text_file, end='')
+        elif button_pressed == "untrack":
             response = utils.SlackResponse(text="Updated user status.")
             self.reddit_bot.db.update_user_status(target_user, status_type)
 
