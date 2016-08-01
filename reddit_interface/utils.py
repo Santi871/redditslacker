@@ -1,5 +1,6 @@
 import json
 import configparser
+import requests
 
 
 def get_token(token_name, config_name='tokens.ini'):
@@ -33,10 +34,47 @@ class SlackField:
         self.field_dict['short'] = short
 
 
+class SlackAttachment:
+
+    def __init__(self, title=None, text=None, fallback=None, callback_id=None, color=None, title_link=None,
+                 image_url=None):
+
+        self.attachment_dict = dict()
+
+        if fallback is not None:
+            self.attachment_dict['fallback'] = fallback
+        if callback_id is not None:
+            self.attachment_dict['callback_id'] = callback_id
+        if color is not None:
+            self.attachment_dict['color'] = color
+        if title_link is not None:
+            self.attachment_dict['title_link'] = title_link
+        if image_url is not None:
+            self.attachment_dict['image_url'] = image_url
+        if title is not None:
+            self.attachment_dict['title'] = title
+        if text is not None:
+            self.attachment_dict['text'] = text
+
+        self.attachment_dict['fields'] = []
+        self.attachment_dict['buttons'] = []
+        self.attachment_dict['attachments'] = []
+
+    def add_field(self, title, value, short="true"):
+        field = SlackField(title, value, short)
+        self.attachment_dict['fields'].append(field)
+
+    def add_button(self, text, value=None, style="default"):
+        button = SlackButton(text, value, style)
+        self.attachment_dict['buttons'].append(button)
+
+
 class SlackResponse:
 
     def __init__(self, token=None, channel=None, text=None, response_type="in_channel"):
         self.response_dict = dict()
+        self.attachments = []
+        self.response_dict['attachments'] = []
         self.token = token
 
         if text is not None:
@@ -50,50 +88,55 @@ class SlackResponse:
             self.response_dict['as_user'] = 'false'
             self.response_dict['channel'] = channel
 
-    def add_attachment(self, title=None, text=None, fallback=None, callback_id=None, color=None, title_link=None,
-                       image_url=None, fields=None, buttons=None):
+    def add_attachment(self, title=None, text=None, fallback=None, callback_id=None, color=None,
+                       title_link=None,
+                       image_url=None):
 
-        attachment_dict = dict()
+        attachment = SlackAttachment(title=title, text=text, fallback=fallback, callback_id=callback_id, color=color,
+                                     title_link=title_link, image_url=image_url)
 
-        if fallback is not None:
-            attachment_dict['fallback'] = fallback
-        if callback_id is not None:
-            attachment_dict['callback_id'] = callback_id
-        if color is not None:
-            attachment_dict['color'] = color
-        if title_link is not None:
-            attachment_dict['title_link'] = title_link
-        if image_url is not None:
-            attachment_dict['image_url'] = image_url
-        if title is not None:
-            attachment_dict['title'] = title
-        if text is not None:
-            attachment_dict['text'] = text
+        self.attachments.append(attachment)
 
-        if fields is not None:
-            fields_list = []
-
-            for field_obj in fields:
-                fields_list.append(field_obj.field_dict)
-
-            attachment_dict['fields'] = fields_list
-
-        if buttons is not None:
-            buttons_list = []
-
-            for buttons_obj in buttons:
-                buttons_list.append(buttons_obj.button_dict)
-
-            attachment_dict['actions'] = buttons_list
+    def _prepare(self):
+        for attachment in self.attachments:
+            self.response_dict['attachments'].append(attachment.attachment_dict)
 
         if self.token is not None:
-            attachment_dict = json.dumps([attachment_dict])
+            self.response_dict['attachments'] = json.dumps(self.response_dict['attachments'])
 
-        # Inorrect behavior
 
-        if "attachments" not in self.response_dict:
-            self.response_dict['attachments'] = [attachment_dict]
+class SlackRequest:
+
+    def __init__(self, request):
+
+        self.form = request.form
+        self.request_type = "command"
+        self.response = None
+        self.command = None
+
+        if 'payload' in self.form:
+            self.request_type = "button"
+            self.form = self.form.get('payload')
+            self.user = self.form['user']['name']
         else:
-            self.response_dict['attachments'].append(attachment_dict)
+            self.user = self.form['user_name']
+            self.command = self.form['command']
+
+        self.response_url = self.form['response_url']
+        self.token = self.form['token']
+
+    def respond(self, response):
+
+        headers = {"content-type": "plain/text"}
+
+        if isinstance(response, dict):
+            headers = {"content-type": "application/json"}
+
+        slack_response = requests.post(self.response_url, data=response, headers=headers)
+
+        return slack_response
+
+
+
 
 
