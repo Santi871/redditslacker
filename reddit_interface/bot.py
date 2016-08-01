@@ -237,8 +237,11 @@ Please [contact the moderators](%s) if you have any questions or concerns*
         return redditor.link_karma + redditor.comment_karma, date
 
     @bot_threading.own_thread
-    def summary(self, username, limit=500, request=None):
+    def summary(self, kwargs):
 
+        username = kwargs['username']
+        request = kwargs['request']
+        limit = 500
         i = 0
         total_comments = 0
         color = 'good'
@@ -458,7 +461,7 @@ Please [contact the moderators](%s) if you have any questions or concerns*
         if request is not None:
             response = request.delayed_response(response)
 
-        return response
+        print(response)
 
     def shadowban(self, username, author):
 

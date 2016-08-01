@@ -10,7 +10,8 @@ class RequestsHandler:
         self.reddit_bot = bot.RedditBot(self.db, load_side_threads=True, debug=True)
 
     def command_response(self, request):
-        response = utils.SlackResponse("Processing your request... please allow a few seconds.")
+        response = utils.SlackResponse(text="Processing your request... please allow a few seconds.",
+                                       response_type='ephemeral')
 
         if request.command == '/summary':
 
@@ -25,7 +26,7 @@ class RequestsHandler:
 
             if len(request.text.split()) == 1:
                 username = request.text
-                response = self.reddit_bot.summary(username, request=request)
+                self.reddit_bot.summary(username=username, request=request)
 
             else:
                 response = utils.SlackResponse("Usage: /user [username].")
@@ -34,7 +35,8 @@ class RequestsHandler:
 
     def button_response(self, request):
 
-        response = utils.SlackResponse("Processing your request... please allow a few seconds.")
+        response = utils.SlackResponse(text="Processing your request... please allow a few seconds.",
+                                       response_type='ephemeral')
         callback_id = request.callback_id
         button_pressed = request.actions[0]['value'].split('_')[0]
         target_user = '_'.join(request.actions[0]['value'].split('_')[1:])
@@ -44,7 +46,7 @@ class RequestsHandler:
         special_buttons = ["shadowban", "unshadowban"]
 
         if callback_id.startswith("user") and button_pressed not in special_buttons:
-            response = utils.SlackResponse("Updated user status.")
+            response = utils.SlackResponse(text="Updated user status.")
             self.reddit_bot.db.update_user_status(target_user, status_type)
 
         elif button_pressed == "shadowban":

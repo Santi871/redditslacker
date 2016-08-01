@@ -94,6 +94,7 @@ class RedditSlackerDatabase:
 
     def fetch_user_log(self, username):
 
+        print(username)
         cur = self.db.cursor()
         cur.execute('''SELECT * FROM USER_TRACKS WHERE USER_NAME = ?''', (username,))
         user_track = cur.fetchone()
