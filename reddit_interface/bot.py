@@ -9,48 +9,13 @@ from time import sleep
 import os
 import requests
 import reddit_interface.utils as utils
-import threading
+import reddit_interface.bot_threading as bot_threading
 import traceback
 import puni
 import datetime
 import copy
 
 SLACK_BOT_TOKEN = utils.get_token('SLACK_BOT_TOKEN')
-
-
-class CreateThread(threading.Thread):
-    def __init__(self, thread_id, name, obj, method):
-        threading.Thread.__init__(self)
-        self.threadID = thread_id
-        self.name = name
-        self.obj = obj
-        self.method = method
-
-    def run(self):
-
-        # This loop will run when the thread raises an exception
-        while True:
-            try:
-                methodToRun = self.method(self.obj)
-                break
-            except AssertionError:
-                print("------------\nRan into an assertion error\nTrying again\n------------")
-                print(traceback.format_exc())
-                sleep(1)
-                continue
-            except:
-                print("*Unhandled exception"
-                      " in thread* '%s'." % self.name)
-                print(traceback.format_exc())
-
-
-def own_thread(func):
-    def wrapped_f(*args):
-        # Create a thread with the method we called
-        thread = CreateThread(1, str(func) + " thread", args[0], func)
-        thread.start()
-
-    return wrapped_f
 
 
 class RedditBot:
@@ -115,7 +80,7 @@ class RedditBot:
         else:
             return str(notes[0].note)
 
-    @own_thread
+    @bot_threading.own_thread
     def new_comments_stream(self):
 
         while True:
@@ -125,13 +90,15 @@ class RedditBot:
 
             for comment in comments:
                 if comment.is_root and comment.author.name != "ELI5_BotMod" and comment.id not in self.already_done:
-                    field_a = utils.SlackField("Author", comment.author.name)
-                    self.r._use_oauth = False
-                    field_b = utils.SlackField("Question", comment.submission.title)
-                    remove_button = utils.SlackButton("Remove", "remove_" + comment.id, style="danger")
+
                     response = utils.SlackResponse(token=SLACK_BOT_TOKEN, channel="#tlc-feed")
-                    response.add_attachment(text=comment.body, fields=[field_b, field_a], buttons=[remove_button],
+                    response.add_attachment(text=comment.body,
                                             color="#0073a3", title_link=comment.permalink)
+                    response.attachments[0].add_field("Author", comment.author.name)
+                    self.r._use_oauth = False
+                    response.attachments[0].add_field("Question", comment.submission.title)
+
+                    response.attachments[0].add_button("Remove", "remove_" + comment.id, style="danger")
 
                     request_response = requests.post('https://slack.com/api/chat.postMessage',
                                                      params=response.response_dict)
@@ -144,7 +111,7 @@ class RedditBot:
                         print(comment.id + ",", end="", file=text_file)
             sleep(120)
 
-    @own_thread
+    @bot_threading.own_thread
     def track_users(self):
         subreddit = self.r.get_subreddit(self.subreddit_name)
 
@@ -161,7 +128,7 @@ class RedditBot:
                         print(item.id + ",", end="", file=text_file)
             sleep(120)
 
-    @own_thread
+    @bot_threading.own_thread
     def monitor_modmail(self):
 
         while True:
@@ -182,7 +149,7 @@ class RedditBot:
                         print(item.id + ",", end="", file=text_file)
             sleep(120)
 
-    @own_thread
+    @bot_threading.own_thread
     def handle_unflaired(self):
 
         r = self.r
@@ -269,10 +236,8 @@ Please [contact the moderators](%s) if you have any questions or concerns*
 
         return redditor.link_karma + redditor.comment_karma, date
 
-    def summary(self, split_text=None, limit=500, username=None, user_status=None):
-
-        if split_text is not None:
-            username = split_text[0]
+    @bot_threading.own_thread
+    def summary(self, username, limit=500, request=None):
 
         i = 0
         total_comments = 0
@@ -291,6 +256,8 @@ Please [contact the moderators](%s) if you have any questions or concerns*
                                   'SRSsucks', 'drama', 'undelete', 'blackout2015', 'oppression', 'kotakuinaction',
                                   'tumblrinaction', 'offensivespeech', 'bixnood')
         total_negative_karma = 0
+
+        user_status = self.db.fetch_user_log(username)
 
         try:
             user = self.r.get_redditor(username, fetch=True)
@@ -451,48 +418,47 @@ Please [contact the moderators](%s) if you have any questions or concerns*
         account_creation = str(datetime.datetime.fromtimestamp(user.created_utc))
         last_note = self.get_last_note(username)
 
-        if user_is_permamuted == "Yes":
-            permamute_button = utils.SlackButton("Unpermamute", "unpermamute_" + username)
-        else:
-            permamute_button = utils.SlackButton("Permamute", "permamute_" + username)
-
-        if user_is_tracked == "Yes":
-            track_button = utils.SlackButton("Untrack", "untrack_" + username)
-        else:
-            track_button = utils.SlackButton("Track", "track_" + username)
-
-        if user_is_shadowbanned == "Yes":
-            shadowban_button = utils.SlackButton("Unshadowban", "unshadowban_" + username, style='danger')
-        else:
-            shadowban_button = utils.SlackButton("Shadowban", "shadowban_" + username, style='danger')
-
-        ban_button = utils.SlackButton("Ban", "ban_" + username, style='danger')
-        field_a = utils.SlackField("Combined karma", combined_karma)
-        field_b = utils.SlackField("Redditor since", account_creation)
-        field_c = utils.SlackField("Removed comments", comment_removals)
-        field_d = utils.SlackField("Removed submissions", link_removals)
-        field_e = utils.SlackField("Bans", bans)
-        field_f = utils.SlackField("Shadowbanned", user_is_shadowbanned)
-        field_g = utils.SlackField("Permamuted", user_is_permamuted)
-        field_h = utils.SlackField("Tracked", user_is_tracked)
-        field_i = utils.SlackField("Latest usernote", last_note, short=False)
         response = utils.SlackResponse()
         response.add_attachment(title='Summary for /u/' + username,
                                 title_link="https://www.reddit.com/user/" + username,
-                                color='#3AA3E3', callback_id='user_' + username,
-                                fields=[field_a, field_b, field_c, field_d, field_e, field_f, field_g,
-                                        field_h, field_i],
-                                buttons=[track_button,
-                                         permamute_button, ban_button,
-                                         shadowban_button])
+                                color='#3AA3E3', callback_id='user_' + username)
 
-        # build a response dict that will be encoded to json
-        field_a = utils.SlackField("Troll likelihood", troll_likelihood)
-        field_b = utils.SlackField("Total comments read", total_comments_read)
+        response.attachments[0].add_field("Combined karma", combined_karma)
+        response.attachments[0].add_field("Redditor since", account_creation)
+        response.attachments[0].add_field("Removed comments", comment_removals)
+        response.attachments[0].add_field("Removed submissions", link_removals)
+        response.attachments[0].add_field("Bans", bans)
+        response.attachments[0].add_field("Shadowbanned", user_is_shadowbanned)
+        response.attachments[0].add_field("Permamuted", user_is_permamuted)
+        response.attachments[0].add_field("Tracked", user_is_tracked)
+        response.attachments[0].add_field("Latest usernote", last_note, short=False)
+
+        if user_is_permamuted == "Yes":
+            response.attachments[0].add_button("Unpermamute", "unpermamute_" + username)
+        else:
+            response.attachments[0].add_button("Permamute", "permamute_" + username)
+
+        if user_is_tracked == "Yes":
+            response.attachments[0].add_button("Untrack", "untrack_" + username)
+        else:
+            response.attachments[0].add_button("Track", "track_" + username)
+
+        if user_is_shadowbanned == "Yes":
+            response.attachments[0].add_button("Unshadowban", "unshadowban_" + username, style='danger')
+        else:
+            response.attachments[0].add_button("Shadowban", "shadowban_" + username, style='danger')
+
+        response.attachments[0].add_button("Ban", "ban_" + username, style='danger')
+
         response.add_attachment(fallback="Summary for /u/" + username, image_url=link['link'],
-                                color=color, fields=[field_a, field_b])
+                                color=color)
+        response.attachments[1].add_field("Troll likelihood", troll_likelihood)
+        response.attachments[1].add_field("Total comments read", total_comments_read)
 
-        return response.response_dict
+        if request is not None:
+            response = request.delayed_response(response)
+
+        return response
 
     def shadowban(self, username, author):
 
@@ -527,12 +493,12 @@ Please [contact the moderators](%s) if you have any questions or concerns*
                     self.un.add_note(n)
 
                 response = utils.SlackResponse(text="User */u/%s* has been shadowbanned." % username)
-                field_b = utils.SlackField("Author", author)
                 response.add_attachment(fallback="Shadowbanned /u/" + username,
                                         title="User profile",
                                         title_link="https://www.reddit.com/user/" + username,
-                                        color='good',
-                                        fields=[field_b])
+                                        color='good')
+
+                response.attachments[0].add_field("Author", author)
 
             except:
                 response = utils.SlackResponse(text="Failed to shadowban user.")
@@ -541,7 +507,7 @@ Please [contact the moderators](%s) if you have any questions or concerns*
                                         text=traceback.format_exc(),
                                         color='danger')
 
-        return response.response_dict
+        return response
 
     def unshadowban(self, username, author):
 
@@ -571,4 +537,4 @@ Please [contact the moderators](%s) if you have any questions or concerns*
                                         title="Exception",
                                         text=traceback.format_exc(),
                                         color='danger')
-        return response.response_dict
+        return response

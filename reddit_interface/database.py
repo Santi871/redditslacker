@@ -3,9 +3,9 @@ import sqlite3
 
 class RedditSlackerDatabase:
 
-    def __init__(self, create_tables=True):
+    def __init__(self, name, create_tables=True):
 
-        self.db = sqlite3.connect('redditslacker_main.db', check_same_thread=False, isolation_level=None)
+        self.db = sqlite3.connect(name, check_same_thread=False, isolation_level=None)
 
         if create_tables:
             self.db.execute('''CREATE TABLE IF NOT EXISTS COMMANDS_LOG

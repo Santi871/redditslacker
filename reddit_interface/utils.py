@@ -10,6 +10,8 @@ def get_token(token_name, config_name='tokens.ini'):
     token = config.get('tokens', token_name)
     return token
 
+SLACK_SLASHCMDS_SECRET = get_token("SLACK_SLASHCMDS_SECRET")
+
 
 class SlackButton:
 
@@ -97,12 +99,14 @@ class SlackResponse:
 
         self.attachments.append(attachment)
 
-    def _prepare(self):
+    def get_json(self):
         for attachment in self.attachments:
             self.response_dict['attachments'].append(attachment.attachment_dict)
 
         if self.token is not None:
             self.response_dict['attachments'] = json.dumps(self.response_dict['attachments'])
+
+        return json.dumps(self.response_dict)
 
 
 class SlackRequest:
@@ -113,24 +117,35 @@ class SlackRequest:
         self.request_type = "command"
         self.response = None
         self.command = None
+        self.actions = None
+        self.callback_id = None
+        self.is_valid = False
 
         if 'payload' in self.form:
             self.request_type = "button"
             self.form = self.form.get('payload')
             self.user = self.form['user']['name']
+            self.team_domain = self.form['team']['domain']
+            self.callback_id = self.form['callback_id']
+            self.actions = self.form['actions']
         else:
             self.user = self.form['user_name']
+            self.team_domain = self.form['team_domain']
             self.command = self.form['command']
+            self.text = self.form['text']
 
         self.response_url = self.form['response_url']
         self.token = self.form['token']
 
-    def respond(self, response):
+        if self.token == SLACK_SLASHCMDS_SECRET:
+            self.is_valid = True
 
+    def delayed_response(self, response):
         headers = {"content-type": "plain/text"}
 
-        if isinstance(response, dict):
+        if isinstance(response, SlackResponse):
             headers = {"content-type": "application/json"}
+            response = json.dumps(response.get_json())
 
         slack_response = requests.post(self.response_url, data=response, headers=headers)
 

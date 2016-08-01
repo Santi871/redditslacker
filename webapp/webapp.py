@@ -6,7 +6,6 @@ import requests
 import os
 import json
 
-SLACK_SLASHCMDS_SECRET = utils.get_token("SLACK_SLASHCMDS_SECRET")
 APP_SECRET_KEY = utils.get_token("FLASK_APP_SECRET_KEY")
 SLACK_APP_ID = utils.get_token("SLACK_APP_ID")
 SLACK_APP_SECRET = utils.get_token("SLACK_APP_SECRET")
@@ -34,16 +33,13 @@ def oauth_callback():
 
 @app.route('/slack/commands', methods=['POST'])
 def command():
-    if request.form.get('token') == SLACK_SLASHCMDS_SECRET:
+    slack_request = utils.SlackRequest(request)
+    if slack_request.is_valid:
 
         commands_handler_obj.db.log_command(request.form)
-        response = commands_handler_obj.define_command_response(request.form)
+        response = commands_handler_obj.command_response(slack_request)
 
-        if response is not None:
-            return Response(response=json.dumps(response), mimetype="application/json")
-        else:
-            commands_handler_obj.thread_command_execution(request.form)
-        return "Processing your request... please allow a few seconds."
+        return Response(response=response.get_json(), mimetype="application/json")
 
     else:
         return "Invalid request token."
@@ -52,20 +48,12 @@ def command():
 @app.route('/slack/action-endpoint', methods=['POST'])
 def button_response():
 
-    payload_dict = json.loads(dict(request.form)['payload'][0])
-    token = payload_dict['token']
-    print(str(payload_dict))
-    if token == SLACK_SLASHCMDS_SECRET:
+    slack_request = utils.SlackRequest(request)
+    if slack_request.is_valid:
 
-        response, re_type = commands_handler_obj.handle_button_request(payload_dict)
-        # args_dict = commands_handler_obj.find_button_request_args(payload_dict)
-        # commands_handler_obj.thread_command_request(args_dict)
+        response = commands_handler_obj.button_response(slack_request)
 
-        # return "Processing your request... please allow a few seconds."
+        return Response(response=response.get_json(), mimetype="application/json")
 
-        if re_type == "json":
-            return Response(response=json.dumps(response), mimetype="application/json")
-        else:
-            return response
     else:
         return "Invalid request token."
