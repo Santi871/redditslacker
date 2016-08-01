@@ -9,10 +9,9 @@ import traceback
 
 class CommandsHandler:
 
-    def __init__(self, debug=False):
+    def __init__(self):
         self.db = db.RedditSlackerDatabase()
-        self.reddit_bot = bot.RedditBot(self.db, load_side_threads=True)
-        self.debug = debug
+        self.reddit_bot = bot.RedditBot(self.db, load_side_threads=True, debug=True)
 
     def thread_command_execution(self, request):
         # Refactor into a decorator
@@ -29,7 +28,7 @@ class CommandsHandler:
                     and request.get('command') != "/user":
                 command = request.get('command')[1:]
                 payload = getattr(self.reddit_bot, command)(split_text=request.get('text').split(),
-                                                            author=request.get('user_name'), debug=self.debug)
+                                                            author=request.get('user_name'))
             else:
                 command = request.get('command')
 
@@ -88,18 +87,17 @@ class CommandsHandler:
         callback_id = payload_dict.get('callback_id')
 
         if callback_id.startswith("user"):
-            if payload_dict.get('actions')[0]['value'].startswith("summary"):
-                username = payload_dict.get('actions')[0]['value'].split('_')[1]
-
-                summary_args_dict = dict()
-                summary_args_dict['command'] = "summary"
-                summary_args_dict['limit'] = 500
-                summary_args_dict['target_user'] = username
-                summary_args_dict['response_url'] = payload_dict['response_url']
-
-                self.thread_command_execution(summary_args_dict)
+            response = self.update_user_track(payload_dict)
 
         return response
+
+    def update_user_track(self, payload_dict):
+
+        status_type = payload_dict.get('actions')[0]['value'].split('_')[0]
+        username = '_'.join(payload_dict.get('actions')[0]['value'].split('_')[1:])
+        self.reddit_bot.db.update_user_status(username, status_type)
+
+        return "Updated user status."
 
     @staticmethod
     def find_button_request_args(payload_dict):

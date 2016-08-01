@@ -10,7 +10,7 @@ class RedditSlackerDatabase:
         if create_tables:
             self.db.execute('''CREATE TABLE IF NOT EXISTS COMMANDS_LOG
                 (ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                USER_NAME TEXT NOT NULL UNIQUE,
+                USER_NAME TEXT NOT NULL,
                 USER_ID TEXT NOT NULL,
                 TEAM_NAME TEXT NOT NULL,
                 TEAM_ID TEXT NOT NULL,
@@ -22,10 +22,10 @@ class RedditSlackerDatabase:
 
             self.db.execute('''CREATE TABLE IF NOT EXISTS USER_TRACKS
                             (ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                            USER_NAME TEXT NOT NULL,
-                            REMOVED_COMMENTS INTEGER NOT NULL,
-                            REMOVED_SUBMISSIONS INTEGER NOT NULL,
-                            BANS INTEGER NOT NULL,
+                            USER_NAME TEXT UNIQUE NOT NULL,
+                            REMOVED_COMMENTS INTEGER NOT NULL DEFAULT 0,
+                            REMOVED_SUBMISSIONS INTEGER NOT NULL DEFAULT 0,
+                            BANS INTEGER NOT NULL DEFAULT 0,
                             PERMAMUTED INTEGER NOT NULL DEFAULT 0,
                             TRACKED INTEGER NOT NULL DEFAULT 0,
                             SHADOWBANNED INTEGER NOT NULL DEFAULT 0)''')
@@ -77,10 +77,11 @@ class RedditSlackerDatabase:
         if user_track is not None:
 
             cur.execute('''REPLACE INTO USER_TRACKS(ID, USER_NAME, REMOVED_COMMENTS,
-                                REMOVED_SUBMISSIONS, BANS) VALUES(?,?,?,?,?)''', (user_track[0], username,
-                                                                                  user_comment_removals,
-                                                                                  user_link_removals,
-                                                                                  user_bans))
+                                REMOVED_SUBMISSIONS, BANS, PERMAMUTED, TRACKED, SHADOWBANNED)
+                                VALUES(?,?,?,?,?,?,?,?)''', (user_track[0], username,
+                                                             user_comment_removals,
+                                                             user_link_removals,
+                                                             user_bans, user_track[5], user_track[6], user_track[7]))
         else:
             cur.execute('''INSERT INTO USER_TRACKS(USER_NAME, REMOVED_COMMENTS, REMOVED_SUBMISSIONS, BANS)
                                 VALUES(?,?,?,?)''', (username, user_comment_removals, user_link_removals, user_bans))
@@ -116,9 +117,89 @@ class RedditSlackerDatabase:
 
         return track_info
 
-    def update_user_status(self, username, status):
-        # Add updates for shadowban, permamuted and tracked
-        pass
+    def fetch_tracks(self, option_type):
 
+        cur = self.db.cursor()
+
+        if option_type == "permamuted":
+            cur.execute('''SELECT * FROM USER_TRACKS WHERE PERMAMUTED = 1''')
+        elif option_type == "shadowbanned":
+            cur.execute('''SELECT * FROM USER_TRACKS WHERE SHADOWBANNED = 1''')
+        elif option_type == "tracked":
+            cur.execute('''SELECT * FROM USER_TRACKS WHERE TRACKED = 1''')
+
+        return cur.fetchall()
+
+    def update_user_status(self, username, status_name):
+        cur = self.db.cursor()
+        print(username)
+
+        cur.execute('''SELECT * FROM USER_TRACKS WHERE USER_NAME = ?''', (username,))
+        user_track = cur.fetchone()
+
+        if user_track is not None:
+
+            if status_name == "shadowban":
+                cur.execute('''REPLACE INTO USER_TRACKS(ID, USER_NAME, REMOVED_COMMENTS,
+                    REMOVED_SUBMISSIONS, BANS, PERMAMUTED, TRACKED, SHADOWBANNED)
+                    VALUES(?,?,?,?,?,?,?,?)''', (user_track[0], username,
+                                                 user_track[2],
+                                                 user_track[3],
+                                                 user_track[4], user_track[5], user_track[6], 1))
+            elif status_name == "permamute":
+                cur.execute('''REPLACE INTO USER_TRACKS(ID, USER_NAME, REMOVED_COMMENTS,
+                    REMOVED_SUBMISSIONS, BANS, PERMAMUTED, TRACKED, SHADOWBANNED)
+                    VALUES(?,?,?,?,?,?,?,?)''', (user_track[0], username,
+                                                 user_track[2],
+                                                 user_track[3],
+                                                 user_track[4], 1, user_track[6], user_track[7]))
+            elif status_name == "track":
+                cur.execute('''REPLACE INTO USER_TRACKS(ID, USER_NAME, REMOVED_COMMENTS,
+                    REMOVED_SUBMISSIONS, BANS, PERMAMUTED, TRACKED, SHADOWBANNED)
+                    VALUES(?,?,?,?,?,?,?,?)''', (user_track[0], username,
+                                                 user_track[2],
+                                                 user_track[3],
+                                                 user_track[4], user_track[5], 1, user_track[7]))
+            elif status_name == "untrack":
+                cur.execute('''REPLACE INTO USER_TRACKS(ID, USER_NAME, REMOVED_COMMENTS,
+                    REMOVED_SUBMISSIONS, BANS, PERMAMUTED, TRACKED, SHADOWBANNED)
+                    VALUES(?,?,?,?,?,?,?,?)''', (user_track[0], username,
+                                                 user_track[2],
+                                                 user_track[3],
+                                                 user_track[4], user_track[5], 0, user_track[7]))
+            elif status_name == "unpermamute":
+                cur.execute('''REPLACE INTO USER_TRACKS(ID, USER_NAME, REMOVED_COMMENTS,
+                    REMOVED_SUBMISSIONS, BANS, PERMAMUTED, TRACKED, SHADOWBANNED)
+                    VALUES(?,?,?,?,?,?,?,?)''', (user_track[0], username,
+                                                 user_track[2],
+                                                 user_track[3],
+                                                 user_track[4], 0, user_track[6], user_track[7]))
+            elif status_name == "unshadowban":
+                cur.execute('''REPLACE INTO USER_TRACKS(ID, USER_NAME, REMOVED_COMMENTS,
+                    REMOVED_SUBMISSIONS, BANS, PERMAMUTED, TRACKED, SHADOWBANNED)
+                    VALUES(?,?,?,?,?,?,?,?)''', (user_track[0], username,
+                                                 user_track[2],
+                                                 user_track[3],
+                                                 user_track[4], user_track[5], user_track[6], 0))
+
+        else:
+            if status_name == "shadowban":
+                cur.execute('''INSERT INTO USER_TRACKS(USER_NAME, SHADOWBANNED)
+                    VALUES(?,?)''', (username, 1))
+            elif status_name == "permamute":
+                cur.execute('''INSERT INTO USER_TRACKS(USER_NAME, PERMAMUTED)
+                    VALUES(?,?)''', (username, 1))
+            elif status_name == "track":
+                cur.execute('''INSERT INTO USER_TRACKS(USER_NAME, TRACKED)
+                    VALUES(?,?)''', (username, 1))
+            elif status_name == "untrack":
+                cur.execute('''INSERT INTO USER_TRACKS(USER_NAME, TRACKED)
+                    VALUES(?,?)''', (username, 0))
+            elif status_name == "unpermamute":
+                cur.execute('''INSERT INTO USER_TRACKS(USER_NAME, PERMAMUTED)
+                    VALUES(?,?)''', (username, 0))
+            elif status_name == "unshadowban":
+                cur.execute('''INSERT INTO USER_TRACKS(USER_NAME, SHADOWBANNED)
+                    VALUES(?,?)''', (username, 0))
 
 

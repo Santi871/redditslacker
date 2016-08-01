@@ -29,13 +29,19 @@ class CreateThread(threading.Thread):
     def run(self):
 
         # This loop will run when the thread raises an exception
-        try:
-            print("Starting " + self.name)
-            methodToRun = self.method(self.obj)
-        except:
-            print("*Unhandled exception"
-                  " in thread* '%s'." % self.name)
-            print(traceback.format_exc())
+        while True:
+            try:
+                methodToRun = self.method(self.obj)
+                break
+            except AssertionError:
+                print("------------\nRan into an assertion error\nTrying again\n------------")
+                print(traceback.format_exc())
+                sleep(1)
+                continue
+            except:
+                print("*Unhandled exception"
+                      " in thread* '%s'." % self.name)
+                print(traceback.format_exc())
 
 
 def own_thread(func):
@@ -51,11 +57,12 @@ class RedditBot:
 
     """Class that implements a Reddit bot to perform moderator actions in a specific subreddit"""
 
-    def __init__(self, db, load_side_threads=True):
+    def __init__(self, db, load_side_threads=True, debug=False):
         handler = MultiprocessHandler()
         self.db = db
         self.r = praw.Reddit(user_agent="windows:RedditSlacker 0.1 by /u/santi871", handler=handler)
         self.imgur = ImgurClient(utils.get_token('IMGUR_CLIENT_ID'), utils.get_token('IMGUR_CLIENT_SECRET'))
+        self.debug = debug
 
         try:
             self._authenticate()
@@ -71,10 +78,13 @@ class RedditBot:
                               'hugepilchard', 'curmudgy', 'h2g2_researcher', 'jim777ps3', 'letstrythisagain_',
                               'mr_magnus', 'terrorpaw', 'kodack10', 'doc_daneeka')
 
+        self.already_done = self.fetch_already_done("already_done.txt")
+
         # self.hello()
         if load_side_threads:
             self.new_comments_stream()
             self.track_users()
+            self.monitor_modmail()
 
     def _authenticate(self):
         o = OAuth2Util.OAuth2Util(self.r)
@@ -86,40 +96,90 @@ class RedditBot:
         data = {'token': SLACK_BOT_TOKEN, 'channel': '#random', 'text': 'waw', 'as_user': 'false'}
         requests.post('https://slack.com/api/chat.postMessage', params=data)
 
+    @staticmethod
+    def fetch_already_done(filename):
+        try:
+            with open(filename, "r") as text_file:
+                already_done = text_file.read().split(",")
+        except FileNotFoundError:
+            with open(filename, "a+"):
+                pass
+            already_done = []
+
+        return already_done
+
+    def get_last_note(self, username):
+        notes = list(self.un.get_notes(username))
+
+        if len(notes) == 0:
+            return "No usernotes attached to this user."
+        else:
+            return str(notes[0].note)
+
     @own_thread
     def new_comments_stream(self):
 
-        self.r._use_oauth = False
-        for comment in praw.helpers.comment_stream(self.r, self.subreddit_name, limit=2, verbosity=0):
-            if comment.is_root and comment.author.name != "ELI5_BotMod":
-                field_a = utils.SlackField("Author", comment.author.name)
-                field_b = utils.SlackField("Question", comment.submission.title)
-                remove_button = utils.SlackButton("Remove", "remove_" + comment.id, style="danger")
-                response = utils.SlackResponse(token=SLACK_BOT_TOKEN, channel="#tlc-feed")
-                response.add_attachment(text=comment.body, fields=[field_b, field_a], buttons=[remove_button],
-                                        color="#0073a3", title_link=comment.permalink)
+        while True:
 
-                request_response = requests.post('https://slack.com/api/chat.postMessage',
-                                                 params=response.response_dict)
+            self.r._use_oauth = False
+            comments = self.r.get_subreddit(self.subreddit_name).get_comments(limit=100, sort='new')
 
-                print(str(request_response))
+            for comment in comments:
+                if comment.is_root and comment.author.name != "ELI5_BotMod" and comment.id not in self.already_done:
+                    field_a = utils.SlackField("Author", comment.author.name)
+                    self.r._use_oauth = False
+                    field_b = utils.SlackField("Question", comment.submission.title)
+                    remove_button = utils.SlackButton("Remove", "remove_" + comment.id, style="danger")
+                    response = utils.SlackResponse(token=SLACK_BOT_TOKEN, channel="#tlc-feed")
+                    response.add_attachment(text=comment.body, fields=[field_b, field_a], buttons=[remove_button],
+                                            color="#0073a3", title_link=comment.permalink)
+
+                    request_response = requests.post('https://slack.com/api/chat.postMessage',
+                                                     params=response.response_dict)
+
+                    print(str(request_response))
+
+                    self.already_done.append(comment.id)
+
+                    with open("already_done.txt", "a") as text_file:
+                        print(comment.id + ",", end="", file=text_file)
+            sleep(120)
 
     @own_thread
     def track_users(self):
         subreddit = self.r.get_subreddit(self.subreddit_name)
-        with open("modlog_alreadydone.txt", "r") as text_file:
-            already_done = text_file.read().split(",")
 
         while True:
             self.r._use_oauth = False
             modlog = subreddit.get_mod_log(limit=100)
 
             for item in modlog:
-                if item.id not in already_done:
+                if item.id not in self.already_done:
                     user_dict = self.db.handle_mod_log(item)
-                    already_done.append(item.id)
+                    self.already_done.append(item.id)
 
-                    with open("modlog_alreadydone.txt", "a") as text_file:
+                    with open("already_done.txt", "a") as text_file:
+                        print(item.id + ",", end="", file=text_file)
+            sleep(120)
+
+    @own_thread
+    def monitor_modmail(self):
+
+        while True:
+            self.r._use_oauth = False
+            modmail = self.r.get_mod_mail('santi871', limit=100)
+
+            muted_users = [track[1] for track in self.db.fetch_tracks("permamuted")]
+
+            for item in modmail:
+                if item.id not in self.already_done and item.author.name in muted_users:
+
+                    if not self.debug:
+                        item.mute_modmail_author()
+
+                    self.already_done.append(item.id)
+
+                    with open("already_done.txt", "a") as text_file:
                         print(item.id + ",", end="", file=text_file)
             sleep(120)
 
@@ -147,8 +207,8 @@ class RedditBot:
         total_karma = 0
         troll_index = 0
         troll_likelihood = "Low"
-        blacklisted_subreddits = ('theredpill', 'rage', 'atheism', 'conspiracy', 'subredditdrama', 'subredditcancer',
-                                  'SRSsucks', 'drama', 'undelete', 'blackout2015', 'oppression0', 'kotakuinaction',
+        blacklisted_subreddits = ('theredpill', 'rage', 'atheism', 'conspiracy', 'the_donald', 'subredditcancer',
+                                  'SRSsucks', 'drama', 'undelete', 'blackout2015', 'oppression', 'kotakuinaction',
                                   'tumblrinaction', 'offensivespeech', 'bixnood')
         total_negative_karma = 0
 
@@ -198,7 +258,7 @@ class RedditBot:
 
         if not total_comments_read:
             response = utils.SlackResponse()
-            response.add_attachment(fallback="Summary for /u/" + username, text="Error: user has no comments.",
+            response.add_attachment(fallback="Summary for /u/" + username, text="Summary error: user has no comments.",
                                     color='danger')
 
             return response.response_dict
@@ -226,9 +286,6 @@ class RedditBot:
         if troll_index >= 100 or total_negative_karma < (-200 * (total_comments_read / limit)) or average_karma < -10:
             troll_likelihood = 'Extremely high'
             color = 'danger'
-
-        print(troll_index)
-        print(total_negative_karma)
 
         for subreddit in subreddit_names:
             i = subreddit_total.count(subreddit)
@@ -312,6 +369,7 @@ class RedditBot:
         user_is_shadowbanned = user_status[5]
         combined_karma = user.link_karma + user.comment_karma
         account_creation = str(datetime.datetime.fromtimestamp(user.created_utc))
+        last_note = self.get_last_note(username)
 
         if user_is_permamuted == "Yes":
             permamute_button = utils.SlackButton("Unpermamute", "unpermamute_" + username)
@@ -337,12 +395,13 @@ class RedditBot:
         field_f = utils.SlackField("Shadowbanned", user_is_shadowbanned)
         field_g = utils.SlackField("Permamuted", user_is_permamuted)
         field_h = utils.SlackField("Tracked", user_is_tracked)
+        field_i = utils.SlackField("Latest usernote", last_note, short=False)
         response = utils.SlackResponse()
         response.add_attachment(title='Summary for /u/' + username,
                                 title_link="https://www.reddit.com/user/" + username,
                                 color='#3AA3E3', callback_id='user_' + username,
                                 fields=[field_a, field_b, field_c, field_d, field_e, field_f, field_g,
-                                        field_h],
+                                        field_h, field_i],
                                 buttons=[track_button,
                                          permamute_button, ban_button,
                                          shadowban_button])
@@ -355,7 +414,7 @@ class RedditBot:
 
         return response.response_dict
 
-    def shadowban(self, split_text, author, debug=False):
+    def shadowban(self, split_text, author):
 
         """*!shadowban [user] [reason]:* Shadowbans [user] and adds usernote [reason] - USERNAME IS CASE SENSITIVE!"""
 
@@ -383,7 +442,7 @@ class RedditBot:
                              wiki_page_content[beg_ind:end_ind].replace("]", replacement) + \
                              wiki_page_content[end_ind:]
 
-                    if not debug:
+                    if not self.debug:
 
                         r.edit_wiki_page(self.subreddit_name, "config/automoderator", newstr,
                                          reason='ELI5_ModBot shadowban user "/u/%s" executed by Slack user "%s"'

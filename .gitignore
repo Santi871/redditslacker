@@ -43,6 +43,7 @@ var/
 pip-log.txt
 pip-delete-this-directory.txt
 /modlog_alreadydone.txt
+/already_done.txt
 /redditslacker_main.db
 
 # Unit test / coverage reports

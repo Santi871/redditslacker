@@ -10,9 +10,6 @@ class CreateThread(threading.Thread):
         self.request = request
 
     def run(self):
-
-        print("Starting " + self.name)
         methodToRun = self.method(self.request)
-        print("Exiting " + self.name)
 
 
