@@ -13,6 +13,7 @@ import threading
 import traceback
 import puni
 import datetime
+import copy
 
 SLACK_BOT_TOKEN = utils.get_token('SLACK_BOT_TOKEN')
 
@@ -179,6 +180,87 @@ class RedditBot:
 
                     with open("already_done.txt", "a") as text_file:
                         print(item.id + ",", end="", file=text_file)
+            sleep(120)
+
+    @own_thread
+    def handle_unflaired(self):
+
+        r = self.r
+        unflaired_submissions_ids = []
+        unflaired_submissions = []
+
+        while True:
+
+            highest_timestamp = datetime.datetime.now() - datetime.timedelta(minutes=10)
+            try:
+                submissions = r.get_subreddit('explainlikeimfive').get_new(limit=100)
+
+                for submission in submissions:
+
+                    if submission.created > highest_timestamp.timestamp() and \
+                                    submission.id not in unflaired_submissions_ids and \
+                                    submission.link_flair_text is None:
+                        submission.remove()
+
+                        s1 = submission.author
+                        s2 = 'https://www.reddit.com/message/compose/?to=/r/explainlikeimfive'
+                        s3 = submission.permalink
+                        comment = ("""Hi /u/%s,
+
+It looks like you haven't assigned a category flair to your question, so it has been automatically removed.
+You can assign a category flair to your question by clicking the *flair* button under it.
+
+Shortly after you have assigned a category flair to your question, it will be automatically re-approved and
+ this message
+will be deleted.
+
+**Mobile users:** some reddit apps don't support flair selection (including the official one). In order to
+ flair your
+question, open it in your phone's web browser by clicking [this link](%s) and select
+flair as you would in a desktop computer.
+
+---
+
+*I am a bot, and this action was performed automatically.
+Please [contact the moderators](%s) if you have any questions or concerns*
+""") % (s1, s3, s2)
+                        comment_obj = submission.add_comment(comment)
+                        comment_obj.distinguish(sticky=True)
+                        unflaired_submissions_ids.append(submission.id)
+                        unflaired_submissions.append((submission.id, comment_obj.fullname))
+
+                unflaired_submissions_duplicate = copy.deepcopy(unflaired_submissions)
+
+                for submission_tuple in unflaired_submissions_duplicate:
+
+                    refreshed_submission = r.get_submission(submission_id=submission_tuple[0])
+
+                    comment_obj = r.get_info(thing_id=submission_tuple[1])
+
+                    if refreshed_submission.link_flair_text is not None:
+                        refreshed_submission.approve()
+
+                        comment_obj.remove()
+
+                        unflaired_submissions.remove(submission_tuple)
+                        unflaired_submissions_ids.remove(submission_tuple[0])
+
+                    else:
+
+                        submission_time = datetime.datetime.fromtimestamp(refreshed_submission.created_utc)
+                        d = datetime.datetime.now() - submission_time
+                        delta_time = d.total_seconds()
+
+                        if delta_time >= 10800:
+                            unflaired_submissions.remove(submission_tuple)
+                            unflaired_submissions_ids.remove(submission_tuple[0])
+                            comment_obj.remove()
+
+            except:
+                print("--------------\nUnexpected exception.\n--------------")
+                print(traceback.format_exc())
+                continue
+
             sleep(120)
 
     def get_user_details(self, username):
