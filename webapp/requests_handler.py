@@ -7,7 +7,7 @@ class RequestsHandler:
 
     def __init__(self):
         self.db = db.RedditSlackerDatabase('redditslacker_main.db')
-        self.reddit_bot = bot.RedditBot(self.db, load_side_threads=True, debug=True)
+        self.reddit_bot = bot.RedditBot(self.db)
 
     def command_response(self, request):
         response = utils.SlackResponse(text="Processing your request... please allow a few seconds.",
@@ -38,8 +38,7 @@ class RequestsHandler:
 
     def button_response(self, request):
 
-        response = utils.SlackResponse(text="Processing your request... please allow a few seconds.",
-                                       response_type='ephemeral')
+        response = utils.SlackResponse(text="Processing your request... please allow a few seconds.")
         callback_id = request.callback_id
         button_pressed = request.actions[0]['value'].split('_')[0]
         target_user = '_'.join(request.actions[0]['value'].split('_')[1:]).lower()

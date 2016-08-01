@@ -12,7 +12,6 @@ import reddit_interface.bot_threading as bot_threading
 import traceback
 import puni
 import datetime
-import copy
 
 SLACK_BOT_TOKEN = utils.get_token('SLACK_BOT_TOKEN')
 
@@ -47,6 +46,7 @@ class RedditBot:
             self.comments_feed()
             self.track_users()
             self.monitor_modmail()
+            self.handle_unflaired()
 
     def _authenticate(self):
         o = OAuth2Util.OAuth2Util(self.r)
@@ -55,13 +55,20 @@ class RedditBot:
 
     @staticmethod
     def fetch_already_done(filename):
+
+        already_done = []
         try:
             with open(filename, "r") as text_file:
                 already_done = text_file.read().split(",")
+
+                try:
+                    already_done.remove('')
+                except ValueError:
+                    pass
+
         except FileNotFoundError:
             with open(filename, "a+"):
                 pass
-            already_done = []
 
         return already_done
 
@@ -135,13 +142,15 @@ class RedditBot:
         while True:
             self.r._use_oauth = False
             modlog = subreddit.get_mod_log(limit=100)
+            already_done_user = []
 
             for item in modlog:
-                if item.id not in self.already_done and item.target_author not in ignored_users:
+                if item.id not in self.already_done and item.target_author not in ignored_users\
+                        and item.target_author not in already_done_user:
                     user_dict = self.db.handle_mod_log(item)
 
                     if user_dict['comment_removals'] > 2:
-                        response = utils.SlackResponse(text="@channel")
+                        response = utils.SlackResponse()
                         response.add_attachment(title="Warning regarding user /u/" + user_dict['username'],
                                                 title_link="https://www.reddit.com/user/" + user_dict['username'],
                                                 text="User has had 3> comments removed. Please check profile history.",
@@ -150,7 +159,7 @@ class RedditBot:
                         response.post_to_channel('#rs_feed')
 
                     if user_dict['link_removals'] > 1:
-                        response = utils.SlackResponse(text="@channel")
+                        response = utils.SlackResponse()
                         response.add_attachment(title="Warning regarding user /u/" + user_dict['username'],
                                                 title_link="https://www.reddit.com/user/" + user_dict['username'],
                                                 text="User has had 2> submissions removed. Please check profile"
@@ -161,13 +170,15 @@ class RedditBot:
 
                     if user_dict['bans'] > 1:
 
-                        response = utils.SlackResponse(text="@channel")
+                        response = utils.SlackResponse()
                         response.add_attachment(title="Warning regarding user /u/" + user_dict['username'],
                                                 title_link="https://www.reddit.com/user/" + user_dict['username'],
                                                 text="User has been banned 2> times. Please check profile history.",
                                                 color='danger')
 
                         response.post_to_channel('#rs_feed')
+
+                    already_done_user.append(user_dict['username'])
 
                     self.already_done.append(item.id)
 
@@ -226,6 +237,9 @@ class RedditBot:
 
                 for submission in submissions:
 
+                    if submission.mod_reports:
+                        print(str(submission.mod_reports))
+
                     if submission.author.name in tracked_users and submission.id not in self.already_done:
                         response = utils.SlackResponse(text="New submission by user /u/" + submission.author.name)
 
@@ -252,7 +266,7 @@ class RedditBot:
                         comment_obj = submission.add_comment(comment)
                         comment_obj.distinguish(sticky=True)
 
-                        unflaired_submission = utils.UnflairedSubmission(submission, comment)
+                        unflaired_submission = utils.UnflairedSubmission(submission, comment_obj)
 
                         unflaired_submissions.append(unflaired_submission)
 
@@ -268,7 +282,7 @@ class RedditBot:
 
                         submission_object.comment.delete()
                         unflaired_submissions.remove(submission_object)
-                        self.remove_from_file("unflaired_submissions.txt", submission_object.id)
+                        self.remove_from_file("unflaired_submissions.txt", submission_object.submission.id)
 
                     else:
 
@@ -283,6 +297,7 @@ class RedditBot:
             except:
                 print("--------------\nUnexpected exception.\n--------------")
                 print(traceback.format_exc())
+                sleep(60)
                 continue
 
             sleep(120)
