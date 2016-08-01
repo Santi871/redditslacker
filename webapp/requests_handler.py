@@ -3,7 +3,7 @@ import reddit_interface.utils as utils
 import reddit_interface.database as db
 
 
-class CommandsHandler:
+class RequestsHandler:
 
     def __init__(self):
         self.db = db.RedditSlackerDatabase('redditslacker_main.db')

@@ -14,7 +14,7 @@ os.environ["OAUTHLIB_RELAX_TOKEN_SCOPE"] = '1'
 app = Flask(__name__, static_url_path='')
 sslify = SSLify(app)
 app.secret_key = APP_SECRET_KEY
-commands_handler_obj = commands_handler.CommandsHandler()
+commands_handler_obj = commands_handler.RequestsHandler()
 
 
 @app.route('/index')
