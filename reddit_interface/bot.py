@@ -178,7 +178,7 @@ class RedditBot:
                                                     text="User has had %s> comments removed. "
                                                          "Please check profile history." %
                                                     str(comment_warning_threshold),
-                                                    color='caution', callback_id="userwarning")
+                                                    color='warning', callback_id="userwarning")
                             response.attachments[0].add_button("Verify", value="verify", style='primary')
 
                             response.post_to_channel('#rs_feed')
@@ -205,7 +205,7 @@ class RedditBot:
                                                     title_link="https://www.reddit.com/user/" + user_dict['username'],
                                                     text="User has had %s> submissions removed. Please check profile"
                                                          " history." % str(submission_warning_threshold),
-                                                    color='caution', callback_id="userwarning")
+                                                    color='warning', callback_id="userwarning")
                             response.attachments[0].add_button("Verify", value="verify", style="primary")
 
                             response.post_to_channel('#rs_feed')
@@ -233,7 +233,7 @@ class RedditBot:
                                                     title_link="https://www.reddit.com/user/" + user_dict['username'],
                                                     text="User has been banned %s> times. Please check profile history."
                                                     % str(ban_warning_threshold),
-                                                    color='caution', callback_id="userwarning")
+                                                    color='warning', callback_id="userwarning")
                             response.attachments[0].add_button("Verify", value="verify", style='primary')
 
                             response.post_to_channel('#rs_feed')
