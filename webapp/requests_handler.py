@@ -15,7 +15,7 @@ class RequestsHandler:
 
         if request.command == '/user':
 
-            if len(request.text.split()) > 1:
+            if len(request.text.split()) >= 1:
                 username = request.text.split()[0]
                 no_summary = None
                 if len(request.text.split()) == 2:
