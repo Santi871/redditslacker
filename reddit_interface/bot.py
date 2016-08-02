@@ -540,7 +540,6 @@ class RedditBot:
                                                        yes="Shadowban")
 
             if not total_comments_read:
-                response = utils.SlackResponse()
                 response.add_attachment(fallback="Summary for /u/" + username,
                                         text="Summary error: user has no comments.",
                                         color='danger')
