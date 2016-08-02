@@ -586,7 +586,7 @@ class RedditBot:
 
             plt.savefig(filename)
 
-            path = os.getcwd() + "\\" + filename
+            path = os.getcwd() + "/" + filename
 
             link = self.imgur.upload_from_path(path, config=None, anon=True)
             os.remove(path)
