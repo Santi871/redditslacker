@@ -269,8 +269,8 @@ def get_unflaired_submissions(r, submission_ids):
     for submission_id in submission_ids:
         r._use_oauth = False
         submission = r.get_submission(submission_id=submission_id)
-        flat_comments = praw.helpers.flatten_tree(submission.comments)
         submission.replace_more_comments(limit=None, threshold=0)
+        flat_comments = praw.helpers.flatten_tree(submission.comments)
 
         for comment in flat_comments:
             if comment.author.name.lower() == 'eli5_botmod':
