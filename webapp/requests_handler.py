@@ -82,8 +82,9 @@ class RequestsHandler:
         elif button_pressed == "verify":
             attachment_args = utils.grab_attachment_args(request.original_message)
 
-            response = utils.SlackResponse()
+            response = utils.SlackResponse(request.original_message.get('text', ''))
             response.add_attachment(text=attachment_args['text'], title=attachment_args['title'],
+                                    title_link=attachment_args['title_link'],
                                     color='good', footer="Verified by @%s" % author)
 
         elif button_pressed == "banreq":

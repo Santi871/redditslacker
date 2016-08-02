@@ -237,15 +237,10 @@ class SlackRequest:
 def grab_attachment_args(original_message):
     attachment_text = original_message['attachments'][0]['text']
     attachment_title = original_message['attachments'][0]['title']
-    try:
-        attachment_title_link = original_message['attachments'][0]['title_link']
-    except KeyError:
-        attachment_title_link = ''
 
-    try:
-        field = original_message['attachments'][0]['fields'][0]
-    except KeyError:
-        field = None
+    attachment_title_link = original_message['attachments'][0].get('title_link', '')
+
+    field = original_message['attachments'][0].get('fields', None)
 
     return {'text': attachment_text, 'title': attachment_title, 'title_link': attachment_title_link, 'field': field}
 
