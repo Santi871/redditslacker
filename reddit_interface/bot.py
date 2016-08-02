@@ -499,7 +499,7 @@ class RedditBot:
                                         text="Summary error: user has no comments.",
                                         color='danger')
 
-                return response.response_dict
+                return request.delayed_response(response)
 
             troll_index *= limit / total_comments_read
 

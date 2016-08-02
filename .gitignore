@@ -44,7 +44,7 @@ pip-log.txt
 pip-delete-this-directory.txt
 /modlog_alreadydone.txt
 /unflaired_submissions.txt
-/test.py
+/bot_status_check.py
 /already_done.txt
 /redditslacker_main.db
 
