@@ -89,7 +89,7 @@ class RequestsHandler:
             response.attachments[0].add_button("Verify", value="verify", style='primary')
             response.post_to_channel('#ban-requests')
 
-            self.reddit_bot.remove_comment(cmt_id=arg)
+            self.reddit_bot.report_comment(cmt_id=arg, reason="Slack user @%s has requested a ban." % author)
 
             response = utils.SlackResponse()
             response.add_attachment(text=attachment_args['text'], title=attachment_args['title'],

@@ -153,6 +153,14 @@ class RedditBot:
         comment.approve()
 
     @bot_threading.own_thread
+    def report_comment(self, kwargs):
+        cmt_id = kwargs['cmt_id']
+        reason = kwargs['reason']
+        self.r._use_oauth = False
+        comment = self.r.get_info(thing_id="t1_" + cmt_id)
+        comment.report(reason)
+
+    @bot_threading.own_thread
     def track_users(self):
         subreddit = self.r.get_subreddit(self.subreddit_name)
         ignored_users = ['ELI5_BotMod', 'AutoModerator']
