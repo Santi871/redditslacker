@@ -13,16 +13,7 @@ class RequestsHandler:
     def command_response(self, request):
         response = utils.SlackResponse(text="Processing your request... please allow a few seconds.")
 
-        if request.command == '/summary':
-
-            response = utils.SlackResponse(text='How many comments to load?')
-            response.add_attachment(fallback="You are unable to choose a number of comments to load.",
-                                    callback_id="summary_" + request.text, color="#3AA3E3",
-                                    text="Have in mind loading 1000 comments takes a little longer.")
-            response.attachments[0].add_button("500")
-            response.attachments[0].add_button('1000')
-
-        elif request.command == '/user':
+        if request.command == '/user':
 
             if len(request.text.split()) > 1:
                 username = request.text.split()[0]
@@ -130,6 +121,10 @@ class RequestsHandler:
                                               value=attachment_args['field']['value'])
 
             self.reddit_bot.remove_comment(cmt_id=arg)
+
+        elif button_pressed == "summary":
+            self.reddit_bot.summary(request=request, username=arg, replace_original=False)
+            response = None
 
         return response
 

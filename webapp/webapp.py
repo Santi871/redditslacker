@@ -52,6 +52,9 @@ def button_response():
 
         response = commands_handler_obj.button_response(slack_request)
 
+        if response is None:
+            return Response(status=200)
+
         return Response(response=response.get_json(), mimetype="application/json")
 
     else:

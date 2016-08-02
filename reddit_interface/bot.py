@@ -117,6 +117,7 @@ class RedditBot:
                         response.attachments[0].add_field("Author", comment.author.name)
                         response.attachments[0].add_button("Approve", "approve_" + comment.id, style="primary")
                         response.attachments[0].add_button("Remove", "remove_" + comment.id, style="danger")
+                        response.attachments[0].add_button("Summary", "summary_" + comment.author)
                         response.attachments[0].add_button("Request ban", "banreq_" + comment.id)
 
                         slack_response = response.post_to_channel('#tlc-feed')
@@ -408,7 +409,8 @@ class RedditBot:
 
         username = kwargs['username']
         request = kwargs['request']
-        no_summary = kwargs['no_summary']
+        no_summary = kwargs.get('no_summary', False)
+        replace_original = kwargs.get('replace_original', False)
 
         if no_summary == "nosummary":
             no_summary = True
@@ -601,7 +603,7 @@ class RedditBot:
         account_creation = str(datetime.datetime.fromtimestamp(user.created_utc))
         last_note = self.get_last_note(username)
 
-        response = utils.SlackResponse()
+        response = utils.SlackResponse(replace_original=replace_original)
         response.add_attachment(title='Summary for /u/' + user.name,
                                 title_link="https://www.reddit.com/user/" + username,
                                 color='#3AA3E3', callback_id='user_' + username)

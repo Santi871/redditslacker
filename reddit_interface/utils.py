@@ -119,13 +119,16 @@ class SlackAttachment:
 
 class SlackResponse:
 
-    def __init__(self, text=None, response_type="in_channel"):
+    def __init__(self, text=None, response_type="in_channel", replace_original=True):
         self.response_dict = dict()
         self.attachments = []
         self._is_prepared = False
 
         if text is not None:
             self.response_dict['text'] = text
+
+        if not replace_original:
+            self.response_dict['replace_original'] = 'false'
 
         self.response_dict['response_type'] = response_type
 
