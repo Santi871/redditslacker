@@ -630,7 +630,7 @@ class RedditBot:
         else:
             response.attachments[0].add_button("Track", "track_" + username)
 
-        if self.config.get_config("explainlikeimfive", "shadowbans_enabled", var_type='bool'):
+        if self.config.get_config(section='explainlikeimfive', name="shadowbans_enabled", var_type='bool'):
             if user_is_shadowbanned == "Yes":
                 response.attachments[0].add_button("Unshadowban", "unshadowban_" + username, style='danger')
             else:
