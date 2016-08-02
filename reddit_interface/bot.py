@@ -342,9 +342,6 @@ class RedditBot:
 
                 for submission in submissions:
 
-                    if submission.mod_reports:
-                        print(str(submission.mod_reports))
-
                     if submission.author.name in tracked_users and submission.id not in self.already_done:
                         response = utils.SlackResponse(text="New submission by user /u/" + submission.author.name)
 
@@ -387,6 +384,7 @@ class RedditBot:
 
                         for report in refreshed_submission.mod_reports:
                             refreshed_submission.report(report[0])
+                            print(str(report))
 
                         submission_object.comment.delete()
                         unflaired_submissions.remove(submission_object)
