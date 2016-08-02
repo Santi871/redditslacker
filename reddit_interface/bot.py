@@ -117,7 +117,7 @@ class RedditBot:
                         response.attachments[0].add_field("Author", comment.author.name)
                         response.attachments[0].add_button("Approve", "approve_" + comment.id, style="primary")
                         response.attachments[0].add_button("Remove", "remove_" + comment.id, style="danger")
-                        response.attachments[0].add_button("Summary", "summary_" + comment.author.name)
+                        # response.attachments[0].add_button("Summary", "summary_" + comment.author.name)
                         response.attachments[0].add_button("Request ban", "banreq_" + comment.id)
 
                         slack_response = response.post_to_channel('#tlc-feed')

@@ -58,10 +58,10 @@ class SlackButton:
 
         if confirm is not None:
             confirm_dict = dict()
-            confirm['title'] = "Are you sure?"
-            confirm['text'] = confirm
-            confirm['ok_text'] = yes
-            confirm['dismiss_text'] = 'Cancel'
+            confirm_dict['title'] = "Are you sure?"
+            confirm_dict['text'] = confirm
+            confirm_dict['ok_text'] = yes
+            confirm_dict['dismiss_text'] = 'Cancel'
             self.button_dict['confirm'] = confirm_dict
 
 
