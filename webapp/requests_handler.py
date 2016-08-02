@@ -91,7 +91,7 @@ class RequestsHandler:
 
             response = utils.SlackResponse(text="@%s has requested a ban. Comment:" % author)
             response.add_attachment(text=attachment_args['text'], title=attachment_args['title'],
-                                    color='warning', title_link=attachment_args['title_link'])
+                                    color='warning', title_link=attachment_args['title_link'], callback_id='banreq')
             response.attachments[0].add_field(title=attachment_args['field']['title'],
                                               value=attachment_args['field']['value'])
             response.attachments[0].add_button("Verify", value="verify", style='primary')
