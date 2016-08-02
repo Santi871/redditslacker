@@ -493,6 +493,52 @@ class RedditBot:
 
             total_comments_read = i
 
+            comment_removals = user_status[0]
+            link_removals = user_status[1]
+            bans = user_status[2]
+            user_is_permamuted = user_status[3]
+            user_is_tracked = user_status[4]
+            user_is_shadowbanned = user_status[5]
+            combined_karma = user.link_karma + user.comment_karma
+            account_creation = str(datetime.datetime.fromtimestamp(user.created_utc))
+            last_note = self.get_last_note(username)
+
+            response = utils.SlackResponse(replace_original=replace_original)
+            response.add_attachment(title='Summary for /u/' + user.name,
+                                    title_link="https://www.reddit.com/user/" + username,
+                                    color='#3AA3E3', callback_id='user_' + username)
+
+            response.attachments[0].add_field("Combined karma", combined_karma)
+            response.attachments[0].add_field("Redditor since", account_creation)
+            response.attachments[0].add_field("Removed comments", comment_removals)
+            response.attachments[0].add_field("Removed submissions", link_removals)
+            response.attachments[0].add_field("Bans", bans)
+            response.attachments[0].add_field("Shadowbanned", user_is_shadowbanned)
+            response.attachments[0].add_field("Permamuted", user_is_permamuted)
+            response.attachments[0].add_field("Tracked", user_is_tracked)
+            response.attachments[0].add_field("Latest usernote", last_note, short=False)
+
+            if user_is_permamuted == "Yes":
+                response.attachments[0].add_button("Unpermamute", "unpermamute_" + username)
+            else:
+                response.attachments[0].add_button("Permamute", "permamute_" + username,
+                                                   confirm="The user will be permamuted. This action is reversible.",
+                                                   yes="Permamute")
+
+            if user_is_tracked == "Yes":
+                response.attachments[0].add_button("Untrack", "untrack_" + username)
+            else:
+                response.attachments[0].add_button("Track", "track_" + username)
+
+            if self.config.get_config(section='explainlikeimfive', name="shadowbans_enabled", var_type='bool'):
+                if user_is_shadowbanned == "Yes":
+                    response.attachments[0].add_button("Unshadowban", "unshadowban_" + username, style='danger')
+                else:
+                    response.attachments[0].add_button("Shadowban", "shadowban_" + username, style='danger',
+                                                       confirm="The user will be shadowbanned. "
+                                                               "This action is reversible.",
+                                                       yes="Shadowban")
+
             if not total_comments_read:
                 response = utils.SlackResponse()
                 response.add_attachment(fallback="Summary for /u/" + username,
@@ -600,51 +646,6 @@ class RedditBot:
             os.remove(path)
 
             plt.clf()
-
-        comment_removals = user_status[0]
-        link_removals = user_status[1]
-        bans = user_status[2]
-        user_is_permamuted = user_status[3]
-        user_is_tracked = user_status[4]
-        user_is_shadowbanned = user_status[5]
-        combined_karma = user.link_karma + user.comment_karma
-        account_creation = str(datetime.datetime.fromtimestamp(user.created_utc))
-        last_note = self.get_last_note(username)
-
-        response = utils.SlackResponse(replace_original=replace_original)
-        response.add_attachment(title='Summary for /u/' + user.name,
-                                title_link="https://www.reddit.com/user/" + username,
-                                color='#3AA3E3', callback_id='user_' + username)
-
-        response.attachments[0].add_field("Combined karma", combined_karma)
-        response.attachments[0].add_field("Redditor since", account_creation)
-        response.attachments[0].add_field("Removed comments", comment_removals)
-        response.attachments[0].add_field("Removed submissions", link_removals)
-        response.attachments[0].add_field("Bans", bans)
-        response.attachments[0].add_field("Shadowbanned", user_is_shadowbanned)
-        response.attachments[0].add_field("Permamuted", user_is_permamuted)
-        response.attachments[0].add_field("Tracked", user_is_tracked)
-        response.attachments[0].add_field("Latest usernote", last_note, short=False)
-
-        if user_is_permamuted == "Yes":
-            response.attachments[0].add_button("Unpermamute", "unpermamute_" + username)
-        else:
-            response.attachments[0].add_button("Permamute", "permamute_" + username,
-                                               confirm="The user will be permamuted. This action is reversible.",
-                                               yes="Permamute")
-
-        if user_is_tracked == "Yes":
-            response.attachments[0].add_button("Untrack", "untrack_" + username)
-        else:
-            response.attachments[0].add_button("Track", "track_" + username)
-
-        if self.config.get_config(section='explainlikeimfive', name="shadowbans_enabled", var_type='bool'):
-            if user_is_shadowbanned == "Yes":
-                response.attachments[0].add_button("Unshadowban", "unshadowban_" + username, style='danger')
-            else:
-                response.attachments[0].add_button("Shadowban", "shadowban_" + username, style='danger',
-                                                   confirm="The user will be shadowbanned. This action is reversible.",
-                                                   yes="Shadowban")
 
         if not no_summary:
             response.add_attachment(fallback="Summary for /u/" + username, image_url=link['link'],
