@@ -115,7 +115,19 @@ class RedditSlackerDatabase:
                 is_shadowbanned = "Yes"
             else:
                 is_shadowbanned = "No"
-            track_info = (user_track[2], user_track[3], user_track[4], is_permamuted, is_tracked, is_shadowbanned)
+
+        comment_removals = user_track[2]
+        link_removals = user_track[3]
+        bans = user_track[4]
+
+        if not user_track[2]:
+            comment_removals = "None recorded"
+        if not user_track[3]:
+            link_removals = "None recorded"
+        if not user_track[4]:
+            bans = "None recorded"
+
+        track_info = (comment_removals, link_removals, bans, is_permamuted, is_tracked, is_shadowbanned)
 
         return track_info
 

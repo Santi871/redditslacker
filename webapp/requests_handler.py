@@ -1,6 +1,7 @@
 import reddit_interface.bot as bot
 import reddit_interface.utils as utils
 import reddit_interface.database as db
+from puni import Note
 
 
 class RequestsHandler:
@@ -52,6 +53,15 @@ class RequestsHandler:
 
         if button_pressed == "permamute" or button_pressed == "unpermamute":
             response = utils.SlackResponse(text="Updated user status.")
+
+            if button_pressed == "permamute":
+                n = Note(arg, "Permamuted via RedditSlacker by Slack user '%s'" % author,
+                              arg, '', 'botban')
+            else:
+                n = Note(arg, "Unpermamuted via RedditSlacker by Slack user '%s'" % author,
+                         arg, '', 'botban')
+            self.reddit_bot.un.add_note(n)
+
             self.reddit_bot.db.update_user_status(arg, status_type)
 
         elif button_pressed == "track":
