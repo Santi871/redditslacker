@@ -136,11 +136,13 @@ class RedditBot:
                         print(comment.id + ",", end="", file=text_file)
             sleep(120)
 
+    @bot_threading.own_thread
     def remove_comment(self, cmt_id):
         self.r._use_oauth = False
         comment = self.r.get_info(thing_id="t1_" + cmt_id)
         comment.remove()
 
+    @bot_threading.own_thread
     def approve_comment(self, cmt_id):
         self.r._use_oauth = False
         comment = self.r.get_info(thing_id="t1_" + cmt_id)

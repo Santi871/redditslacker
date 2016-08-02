@@ -97,14 +97,14 @@ class RequestsHandler:
             response.attachments[0].add_button("Verify", value="verify", style='primary')
             response.post_to_channel('#ban-requests')
 
+            self.reddit_bot.remove_comment(arg)
+
             response = utils.SlackResponse()
             response.add_attachment(text=attachment_args['text'], title=attachment_args['title'],
                                     color='good', footer="Ban requested by @%s" % author,
                                     title_link=attachment_args['title_link'])
             response.attachments[0].add_field(title=attachment_args['field']['title'],
                                               value=attachment_args['field']['value'])
-
-            self.reddit_bot.remove_comment(arg)
 
         elif button_pressed == "approve":
             attachment_args = utils.grab_attachment_args(request.original_message)
