@@ -21,13 +21,13 @@ class RSConfig:
         self.config = configparser.ConfigParser()
         self.config.read(filename)
 
-    def get_config(self, name, section, var_type='str'):
+    def get_config(self, name, section, var_type=None):
 
-        if var_type == 'int':
+        if var_type is None:
             return self.config.getint(section, name)
 
         elif var_type == 'str':
-            return  str(self.config.get(section, name))
+            return str(self.config.get(section, name))
 
         elif var_type == "bool":
             return self.config.getboolean(section, name)
