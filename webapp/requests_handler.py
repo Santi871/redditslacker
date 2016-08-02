@@ -37,8 +37,8 @@ class RequestsHandler:
         elif request.command == '/rsconfig':
 
             args = request.text.split()
-            config_name = args[1]
-            value = args[2]
+            config_name = args[0]
+            value = args[1]
 
             success = self.config.set_config(config_name, 'explainlikeimfive', value)
 
