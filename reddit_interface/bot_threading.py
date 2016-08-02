@@ -1,6 +1,7 @@
 import threading
 import traceback
 from time import sleep
+import requests.exceptions
 
 
 class CreateThread(threading.Thread):
@@ -26,6 +27,9 @@ class CreateThread(threading.Thread):
                 print("------------\nRan into an assertion error\nTrying again\n------------")
                 sleep(1)
                 print(traceback.format_exc())
+                continue
+            except requests.exceptions.HTTPError:
+                sleep(2)
                 continue
             except:
                 print("*Unhandled exception"

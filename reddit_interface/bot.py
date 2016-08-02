@@ -12,6 +12,7 @@ import reddit_interface.bot_threading as bot_threading
 import traceback
 import puni
 import datetime
+import requests.exceptions
 
 SLACK_BOT_TOKEN = utils.get_token('SLACK_BOT_TOKEN')
 
@@ -390,6 +391,9 @@ class RedditBot:
                             unflaired_submissions.remove(submission_object)
                             submission_object.comment.delete()
 
+            except requests.exceptions.HTTPError:
+                sleep(2)
+                continue
             except:
                 print("--------------\nUnexpected exception.\n--------------")
                 print(traceback.format_exc())

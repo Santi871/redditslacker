@@ -243,7 +243,10 @@ def grab_attachment_args(original_message):
 
     attachment_title_link = original_message['attachments'][0].get('title_link', '')
 
-    field = original_message['attachments'][0].get('fields', None)[0]
+    field = original_message['attachments'][0].get('fields', None)
+
+    if field is not None:
+        field = field[0]
 
     return {'text': attachment_text, 'title': attachment_title, 'title_link': attachment_title_link, 'field': field}
 
