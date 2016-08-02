@@ -338,7 +338,7 @@ class RedditBot:
             highest_timestamp = datetime.datetime.now() - datetime.timedelta(minutes=10)
             try:
                 self.r._use_oauth = False
-                submissions = r.get_subreddit('explainlikeimfive').get_new(limit=100)
+                submissions = r.get_subreddit('explainlikeimfive').get_new(limit=50)
 
                 for submission in submissions:
 
@@ -402,11 +402,6 @@ class RedditBot:
 
             except (requests.exceptions.HTTPError, praw.errors.HTTPException):
                 sleep(2)
-                continue
-            except:
-                print("--------------\nUnexpected exception.\n--------------")
-                print(traceback.format_exc())
-                sleep(60)
                 continue
 
             sleep(120)
