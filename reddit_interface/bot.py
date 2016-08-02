@@ -402,7 +402,7 @@ class RedditBot:
                             unflaired_submissions.remove(submission_object)
                             submission_object.comment.delete()
 
-            except requests.exceptions.HTTPError:
+            except (requests.exceptions.HTTPError, praw.errors.HTTPException):
                 sleep(2)
                 continue
             except:
