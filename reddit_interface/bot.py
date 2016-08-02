@@ -287,7 +287,7 @@ class RedditBot:
 
                     with open("already_done.txt", "a") as text_file:
                         print(item.id + ",", end="", file=text_file)
-            sleep(120)
+            sleep(300)
 
     @bot_threading.own_thread
     def monitor_modmail(self):
@@ -309,7 +309,7 @@ class RedditBot:
 
                     with open("already_done.txt", "a") as text_file:
                         print(item.id + ",", end="", file=text_file)
-            sleep(120)
+            sleep(30)
 
     @staticmethod
     def remove_from_file(filename, str_to_remove):
