@@ -89,9 +89,9 @@ class RequestsHandler:
         elif button_pressed == "banreq":
             attachment_args = utils.grab_attachment_args(request.original_message)
 
-            response = utils.SlackResponse(text="@%s has requested a ban. Comment:")
+            response = utils.SlackResponse(text="@%s has requested a ban. Comment:" % author)
             response.add_attachment(text=attachment_args['text'], title=attachment_args['title'],
-                                    color='warning', footer="Verified by @%s" % author)
+                                    color='warning', title_link=attachment_args['title_link'])
             response.attachments[0].add_field(title=attachment_args['field']['title'],
                                               value=attachment_args['field']['value'])
             response.attachments[0].add_button("Verify", value="verify", style='primary')
@@ -99,7 +99,8 @@ class RequestsHandler:
 
             response = utils.SlackResponse()
             response.add_attachment(text=attachment_args['text'], title=attachment_args['title'],
-                                    color='good', footer="Ban requested by @%s" % author)
+                                    color='good', footer="Ban requested by @%s" % author,
+                                    title_link=attachment_args['title_link'])
             response.attachments[0].add_field(title=attachment_args['field']['title'],
                                               value=attachment_args['field']['value'])
 
@@ -110,6 +111,7 @@ class RequestsHandler:
 
             response = utils.SlackResponse()
             response.add_attachment(text=attachment_args['text'], title=attachment_args['title'],
+                                    title_link=attachment_args['title_link'],
                                     color='good', footer="Approved by @%s" % author)
             response.attachments[0].add_field(title=attachment_args['field']['title'],
                                               value=attachment_args['field']['value'])
@@ -121,6 +123,7 @@ class RequestsHandler:
 
             response = utils.SlackResponse()
             response.add_attachment(text=attachment_args['text'], title=attachment_args['title'],
+                                    title_link=attachment_args['title_link'],
                                     color='good', footer="Removed by @%s" % author)
             response.attachments[0].add_field(title=attachment_args['field']['title'],
                                               value=attachment_args['field']['value'])
