@@ -7,7 +7,8 @@ class RequestsHandler:
 
     def __init__(self):
         self.db = db.RedditSlackerDatabase('redditslacker_main.db')
-        self.reddit_bot = bot.RedditBot(self.db)
+        self.config = utils.RSConfig("config.ini")
+        self.reddit_bot = bot.RedditBot(self.db, self.config)
 
     def command_response(self, request):
         response = utils.SlackResponse(text="Processing your request... please allow a few seconds.")
@@ -32,6 +33,21 @@ class RequestsHandler:
 
             else:
                 response = utils.SlackResponse("Usage: /user [username].")
+
+        elif request.command == '/rsconfig':
+
+            args = request.text.split()
+            config_name = args[1]
+            value = args[2]
+
+            success = self.config.set_config(config_name, 'explainlikeimfive', value)
+
+            if success:
+                response = utils.SlackResponse()
+                response.add_attachment(text="Configuration updated successfully.", color='good')
+            else:
+                response = utils.SlackResponse()
+                response.add_attachment(text="Configuration parameter not found.", color='danger')
 
         return response
 
@@ -75,7 +91,7 @@ class RequestsHandler:
 
             response = utils.SlackResponse()
             response.add_attachment(text=attachment_text, title=attachment_title, title_link=attachment_title_link,
-                                    color='danger', footer="Verified by @%s" % author)
+                                    color='good', footer="Verified by @%s" % author)
 
         return response
 

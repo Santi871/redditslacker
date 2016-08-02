@@ -1,7 +1,7 @@
 import json
-import configparser
 import requests
 import praw.helpers
+import configparser
 
 
 def get_token(token_name, config_name='tokens.ini'):
@@ -15,9 +15,37 @@ SLACK_SLASHCMDS_SECRET = get_token("SLACK_SLASHCMDS_SECRET")
 SLACK_BOT_TOKEN = get_token('SLACK_BOT_TOKEN')
 
 
+class RSConfig:
+
+    def __init__(self, filename):
+        self.config = configparser.ConfigParser()
+        self.config.read(filename)
+
+    def get_config(self, name, section, var_type='str'):
+
+        if var_type == 'int':
+            return self.config.getint(section, name)
+
+        elif var_type == 'str':
+            return  str(self.config.get(section, name))
+
+        elif var_type == "bool":
+            return self.config.getboolean(section, name)
+
+    def set_config(self, name, section, value):
+
+        try:
+            self.get_config(name, section)
+        except configparser.NoOptionError:
+            return False
+
+        self.config[section][name] = value
+        return True
+
+
 class SlackButton:
 
-    def __init__(self, text, value=None, style="default"):
+    def __init__(self, text, value=None, style="default", confirm=None, yes=None):
         self.button_dict = dict()
         self.button_dict['text'] = text
         self.button_dict['name'] = text
@@ -27,6 +55,14 @@ class SlackButton:
         else:
             self.button_dict['value'] = value
         self.button_dict['type'] = 'button'
+
+        if confirm is not None:
+            confirm_dict = dict()
+            confirm['title'] = "Are you sure?"
+            confirm['text'] = confirm
+            confirm['ok_text'] = yes
+            confirm['dismiss_text'] = 'Cancel'
+            self.button_dict['confirm'] = confirm_dict
 
 
 class SlackField:
@@ -62,7 +98,7 @@ class SlackAttachment:
         if footer is not None:
             self.attachment_dict['footer'] = footer
 
-        self.attachment_dict['mrkdwn_in'] = ['text']
+        self.attachment_dict['mrkdwn_in'] = ['title', 'text']
 
     def add_field(self, title, value, short="true"):
 
@@ -72,12 +108,12 @@ class SlackAttachment:
         field = SlackField(title, value, short)
         self.attachment_dict['fields'].append(field.field_dict)
 
-    def add_button(self, text, value=None, style="default"):
+    def add_button(self, text, value=None, style="default", confirm=None, yes=None):
 
         if 'actions' not in self.attachment_dict:
             self.attachment_dict['actions'] = []
 
-        button = SlackButton(text, value, style)
+        button = SlackButton(text, value, style, confirm, yes)
         self.attachment_dict['actions'].append(button.button_dict)
 
 
@@ -210,6 +246,7 @@ def get_unflaired_submissions(r, submission_ids):
     unflaired_submissions = []
 
     for submission_id in submission_ids:
+        r._use_oauth = False
         submission = r.get_submission(submission_id=submission_id)
         flat_comments = praw.helpers.flatten_tree(submission.comments)
 

@@ -19,9 +19,10 @@ SLACK_BOT_TOKEN = utils.get_token('SLACK_BOT_TOKEN')
 class RedditBot:
     """Class that implements a Reddit bot to perform moderator actions in a specific subreddit"""
 
-    def __init__(self, db, load_side_threads=True, debug=False):
+    def __init__(self, db, config, load_side_threads=True, debug=False):
         handler = MultiprocessHandler()
         self.db = db
+        self.config = config
         self.r = praw.Reddit(user_agent="windows:RedditSlacker 0.1 by /u/santi871", handler=handler)
         self.imgur = ImgurClient(utils.get_token('IMGUR_CLIENT_ID'), utils.get_token('IMGUR_CLIENT_SECRET'))
         self.debug = debug
@@ -151,12 +152,33 @@ class RedditBot:
                     if item.target_author not in already_done_user:
 
                         done = False
-                        if user_dict['comment_removals'] > 2:
+                        if user_dict['comment_removals'] > self.config.get_config(section='explainlikeimfive',
+                                                                                  name='comment_warning_threshold',
+                                                                                  var_type='int'):
                             response = utils.SlackResponse()
                             response.add_attachment(title="Warning regarding user /u/" + user_dict['username'],
                                                     title_link="https://www.reddit.com/user/" + user_dict['username'],
-                                                    text="User has had 3> comments removed. "
-                                                         "Please check profile history.",
+                                                    text="User has had %s> comments removed. "
+                                                         "Please check profile history." %
+                                                         self.config.get_config('explainlikeimfive',
+                                                                                  'comment_warning_threshold'),
+                                                    color='caution', callback_id="userwarning")
+                            response.attachments[0].add_button("Verify", value="verify", style='primary')
+
+                            response.post_to_channel('#rs_feed')
+
+                            done = True
+
+                        if user_dict['comment_removals'] > self.config.get_config(section='explainlikeimfive',
+                                                                                name='comment_warning_threshold_high',
+                                                                                  var_type='int'):
+                            response = utils.SlackResponse()
+                            response.add_attachment(title="*Urgent warning* regarding user /u/" + user_dict['username'],
+                                                    title_link="https://www.reddit.com/user/" + user_dict['username'],
+                                                    text="User has had %s> comments removed. "
+                                                         "Please check profile history immediately." %
+                                                         self.config.get_config('explainlikeimfive',
+                                                                                'comment_warning_threshold_high'),
                                                     color='danger', callback_id="userwarning")
                             response.attachments[0].add_button("Verify", value="verify", style='primary')
 
@@ -164,25 +186,67 @@ class RedditBot:
 
                             done = True
 
-                        if user_dict['link_removals'] > 1:
+                        if user_dict['link_removals'] > self.config.get_config(section='explainlikeimfive',
+                                                                               name='submission_warning_threshold',
+                                                                               var_type='int'):
                             response = utils.SlackResponse()
                             response.add_attachment(title="Warning regarding user /u/" + user_dict['username'],
                                                     title_link="https://www.reddit.com/user/" + user_dict['username'],
-                                                    text="User has had 2> submissions removed. Please check profile"
-                                                         " history.",
-                                                    color='danger', callback_id="userwarning")
-                            response.attachments[0].add_button("Verify", value="verify")
+                                                    text="User has had %s> submissions removed. Please check profile"
+                                                         " history." % self.config.get_config('explainlikeimfive',
+                                                                                  'submission_warning_threshold'),
+                                                    color='caution', callback_id="userwarning")
+                            response.attachments[0].add_button("Verify", value="verify", style="primary")
 
                             response.post_to_channel('#rs_feed')
 
                             done = True
 
-                        if user_dict['bans'] > 1:
+                        if user_dict['link_removals'] > self.config.get_config(section='explainlikeimfive',
+                                                                               name='submission_warning_threshold_high',
+                                                                               var_type='int'):
+                            response = utils.SlackResponse()
+                            response.add_attachment(title="*Urgent warning* regarding user /u/" + user_dict['username'],
+                                                    title_link="https://www.reddit.com/user/" + user_dict['username'],
+                                                    text="User has had %s> submissions removed. Please check profile"
+                                                         " history immediately." %
+                                                         self.config.get_config('explainlikeimfive',
+                                                                                'submission_warning_threshold_high'),
+                                                    color='danger', callback_id="userwarning")
+                            response.attachments[0].add_button("Verify", value="verify", style="primary")
+
+                            response.post_to_channel('#rs_feed')
+
+                            done = True
+
+                        if user_dict['bans'] > self.config.get_config('explainlikeimfive',
+                                                                                  'ban_warning_threshold',
+                                                                      var_type='int'):
 
                             response = utils.SlackResponse()
                             response.add_attachment(title="Warning regarding user /u/" + user_dict['username'],
                                                     title_link="https://www.reddit.com/user/" + user_dict['username'],
-                                                    text="User has been banned 2> times. Please check profile history.",
+                                                    text="User has been banned %s> times. Please check profile history."
+                                                    % self.config.get_config('explainlikeimfive',
+                                                                                  'ban_warning_threshold'),
+                                                    color='caution', callback_id="userwarning")
+                            response.attachments[0].add_button("Verify", value="verify", style='primary')
+
+                            response.post_to_channel('#rs_feed')
+
+                            done = True
+
+                        if user_dict['bans'] > self.config.get_config(section='explainlikeimfive',
+                                                                      name='ban_warning_threshold_high',
+                                                                      var_type='int'):
+
+                            response = utils.SlackResponse()
+                            response.add_attachment(title="*Urgent warning* regarding user /u/" + user_dict['username'],
+                                                    title_link="https://www.reddit.com/user/" + user_dict['username'],
+                                                    text="User has been banned %s> times. "
+                                                         "Please check profile history immediately."
+                                                         % self.config.get_config('explainlikeimfive',
+                                                                                  'ban_warning_threshold_high'),
                                                     color='danger', callback_id="userwarning")
                             response.attachments[0].add_button("Verify", value="verify", style='primary')
 
@@ -208,6 +272,7 @@ class RedditBot:
 
             muted_users = [track[1] for track in self.db.fetch_tracks("permamuted")]
 
+            self.r._use_oauth = False
             for item in modmail:
                 if item.id not in self.already_done and item.author.name in muted_users:
 
@@ -246,6 +311,7 @@ class RedditBot:
 
             highest_timestamp = datetime.datetime.now() - datetime.timedelta(minutes=10)
             try:
+                self.r._use_oauth = False
                 submissions = r.get_subreddit('explainlikeimfive').get_new(limit=100)
 
                 for submission in submissions:
@@ -537,17 +603,22 @@ class RedditBot:
         if user_is_permamuted == "Yes":
             response.attachments[0].add_button("Unpermamute", "unpermamute_" + username)
         else:
-            response.attachments[0].add_button("Permamute", "permamute_" + username)
+            response.attachments[0].add_button("Permamute", "permamute_" + username,
+                                               confirm="The user will be permamuted. This action is reversible.",
+                                               yes="Permamute")
 
         if user_is_tracked == "Yes":
             response.attachments[0].add_button("Untrack", "untrack_" + username)
         else:
             response.attachments[0].add_button("Track", "track_" + username)
 
-        if user_is_shadowbanned == "Yes":
-            response.attachments[0].add_button("Unshadowban", "unshadowban_" + username, style='danger')
-        else:
-            response.attachments[0].add_button("Shadowban", "shadowban_" + username, style='danger')
+        if self.config.get_config("explainlikeimfive", "shadowbans_enabled", var_type='bool'):
+            if user_is_shadowbanned == "Yes":
+                response.attachments[0].add_button("Unshadowban", "unshadowban_" + username, style='danger')
+            else:
+                response.attachments[0].add_button("Shadowban", "shadowban_" + username, style='danger',
+                                                   confirm="The user will be shadowbanned. This action is reversible.",
+                                                   yes="Shadowban")
 
         if not no_summary:
             response.add_attachment(fallback="Summary for /u/" + username, image_url=link['link'],

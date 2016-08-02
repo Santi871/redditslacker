@@ -25,6 +25,7 @@ class CreateThread(threading.Thread):
             except AssertionError:
                 print("------------\nRan into an assertion error\nTrying again\n------------")
                 sleep(1)
+                print(traceback.format_exc())
                 continue
             except:
                 print("*Unhandled exception"
