@@ -18,6 +18,7 @@ SLACK_BOT_TOKEN = get_token('SLACK_BOT_TOKEN')
 class RSConfig:
 
     def __init__(self, filename):
+        self.filename = filename
         self.config = configparser.ConfigParser()
         self.config.read(filename)
 
@@ -40,6 +41,9 @@ class RSConfig:
             return False
 
         self.config[section][name] = value
+
+        with open(self.filename, 'w') as configfile:
+            self.config.write(configfile)
         return True
 
 

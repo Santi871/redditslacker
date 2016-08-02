@@ -20,6 +20,17 @@ class RedditSlackerDatabase:
                 ARGS TEXT NOT NULL,
                 DATETIME TEXT NOT NULL)''')
 
+            self.db.execute('''CREATE TABLE IF NOT EXISTS BUTTONS_LOG
+                (ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                USER_NAME TEXT NOT NULL,
+                USER_ID TEXT NOT NULL,
+                TEAM_NAME TEXT NOT NULL,
+                TEAM_ID TEXT NOT NULL,
+                CHANNEL_NAME TEXT NOT NULL,
+                CHANNEL_ID TEXT NOT NULL,
+                BUTTON_PRESSED TEXT NOT NULL,
+                DATETIME TEXT NOT NULL)''')
+
             self.db.execute('''CREATE TABLE IF NOT EXISTS USER_TRACKS
                             (ID INTEGER PRIMARY KEY AUTOINCREMENT,
                             USER_NAME TEXT UNIQUE NOT NULL,
@@ -48,6 +59,23 @@ class RedditSlackerDatabase:
                                                                                                   team_id, channel_name,
                                                                                                   channel_id,
                                                                                                   command, args))
+
+    def log_button(self, form):
+
+        cur = self.db.cursor()
+        user_name = form.user
+        user_id = form.user_id
+        team_name = form.team_domain
+        team_id = form.get('team_id')
+        channel_name = form.get('channel_name')
+        channel_id = form.get('channel_id')
+        button_pressed = form.actions[0]['value']
+
+        cur.execute('''INSERT INTO BUTTONS_LOG(USER_NAME, USER_ID, TEAM_NAME, TEAM_ID, CHANNEL_NAME, CHANNEL_ID,
+            BUTTON_PRESSED, DATETIME) VALUES(?,?,?,?,?,?,?,CURRENT_TIMESTAMP)''', (user_name, user_id,
+                                                                                    team_name,
+                                                                                    team_id, channel_name,
+                                                                                    channel_id, button_pressed))
 
     def handle_mod_log(self, log):
 
