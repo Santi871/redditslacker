@@ -377,6 +377,9 @@ class RedditBot:
                     if refreshed_submission.link_flair_text is not None:
                         refreshed_submission.approve()
 
+                        for report in refreshed_submission.mod_reports:
+                            refreshed_submission.report(report[0])
+
                         submission_object.comment.delete()
                         unflaired_submissions.remove(submission_object)
                         self.remove_from_file("unflaired_submissions.txt", submission_object.submission.id)
