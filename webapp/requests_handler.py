@@ -54,44 +54,78 @@ class RequestsHandler:
     def button_response(self, request):
 
         response = utils.SlackResponse(text="Processing your request... please allow a few seconds.")
-        callback_id = request.callback_id
         button_pressed = request.actions[0]['value'].split('_')[0]
-        target_user = '_'.join(request.actions[0]['value'].split('_')[1:]).lower()
+        arg = '_'.join(request.actions[0]['value'].split('_')[1:]).lower()
         status_type = request.actions[0]['value'].split('_')[0]
         author = request.user
 
-        special_buttons = ["shadowban", "unshadowban", "track", "untrack", 'verify']
-
-        if callback_id.startswith("user") and button_pressed not in special_buttons:
+        if button_pressed == "permamute" or button_pressed == "unpermamute":
             response = utils.SlackResponse(text="Updated user status.")
-            self.reddit_bot.db.update_user_status(target_user, status_type)
+            self.reddit_bot.db.update_user_status(arg, status_type)
 
         elif button_pressed == "track":
-            response = utils.SlackResponse(text="Updated user status.")
-            self.reddit_bot.db.update_user_status(target_user, status_type)
+            response = utils.SlackResponse(text="Tracking user.")
+            self.reddit_bot.db.update_user_status(arg, status_type)
 
-            with open("tracked_users.txt", "a+") as text_file:
-                print(target_user + ",", file=text_file, end='')
         elif button_pressed == "untrack":
-            response = utils.SlackResponse(text="Updated user status.")
-            self.reddit_bot.db.update_user_status(target_user, status_type)
+            response = utils.SlackResponse(text="Ceasing to track user.")
+            self.reddit_bot.db.update_user_status(arg, status_type)
 
         elif button_pressed == "shadowban":
-            response = self.reddit_bot.shadowban(target_user, author)
-            self.reddit_bot.db.update_user_status(target_user, status_type)
+            response = self.reddit_bot.shadowban(arg, author)
+            self.reddit_bot.db.update_user_status(arg, status_type)
 
         elif button_pressed == "unshadowban":
-            response = self.reddit_bot.unshadowban(target_user, author)
-            self.reddit_bot.db.update_user_status(target_user, status_type)
+            response = self.reddit_bot.unshadowban(arg, author)
+            self.reddit_bot.db.update_user_status(arg, status_type)
 
         elif button_pressed == "verify":
-            attachment_text = request.original_message['attachments'][0]['text']
-            attachment_title = request.original_message['attachments'][0]['title']
-            attachment_title_link = request.original_message['attachments'][0]['title_link']
+            attachment_args = utils.grab_attachment_args(request.original_message)
 
             response = utils.SlackResponse()
-            response.add_attachment(text=attachment_text, title=attachment_title, title_link=attachment_title_link,
+            response.add_attachment(text=attachment_args['text'], title=attachment_args['title'],
                                     color='good', footer="Verified by @%s" % author)
+
+        elif button_pressed == "banreq":
+            attachment_args = utils.grab_attachment_args(request.original_message)
+
+            response = utils.SlackResponse(text="@%s has requested a ban. Comment:")
+            response.add_attachment(text=attachment_args['text'], title=attachment_args['title'],
+                                    color='warning', footer="Verified by @%s" % author)
+            response.attachments[0].add_field(title=attachment_args['field']['title'],
+                                              value=attachment_args['field']['value'])
+            response.attachments[0].add_button("Verify", value="verify", style='primary')
+            response.post_to_channel('#ban-requests')
+
+            response = utils.SlackResponse()
+            response.add_attachment(text=attachment_args['text'], title=attachment_args['title'],
+                                    color='good', footer="Ban requested by @%s" % author)
+            response.attachments[0].add_field(title=attachment_args['field']['title'],
+                                              value=attachment_args['field']['value'])
+
+            self.reddit_bot.remove_comment(arg)
+
+        elif button_pressed == "approve":
+            attachment_args = utils.grab_attachment_args(request.original_message)
+
+            response = utils.SlackResponse()
+            response.add_attachment(text=attachment_args['text'], title=attachment_args['title'],
+                                    color='good', footer="Approved by @%s" % author)
+            response.attachments[0].add_field(title=attachment_args['field']['title'],
+                                              value=attachment_args['field']['value'])
+
+            self.reddit_bot.approve_comment(arg)
+
+        elif button_pressed == "remove":
+            attachment_args = utils.grab_attachment_args(request.original_message)
+
+            response = utils.SlackResponse()
+            response.add_attachment(text=attachment_args['text'], title=attachment_args['title'],
+                                    color='good', footer="Removed by @%s" % author)
+            response.attachments[0].add_field(title=attachment_args['field']['title'],
+                                              value=attachment_args['field']['value'])
+
+            self.reddit_bot.remove_comment(arg)
 
         return response
 

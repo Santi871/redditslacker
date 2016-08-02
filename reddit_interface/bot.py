@@ -117,6 +117,7 @@ class RedditBot:
                         response.attachments[0].add_field("Author", comment.author.name)
                         response.attachments[0].add_button("Approve", "approve_" + comment.id, style="primary")
                         response.attachments[0].add_button("Remove", "remove_" + comment.id, style="danger")
+                        response.attachments[0].add_button("Request ban", "banreq_" + comment.id)
 
                         slack_response = response.post_to_channel('#tlc-feed')
 
@@ -134,6 +135,15 @@ class RedditBot:
                     with open("already_done.txt", "a") as text_file:
                         print(comment.id + ",", end="", file=text_file)
             sleep(120)
+
+    def remove_comment(self, cmt_id):
+        comment = self.r.get_info(thing_id="t1_" + cmt_id)
+        comment.remove()
+
+    def approve_comment(self, cmt_id):
+
+        comment = self.r.get_info(thing_id="t1_" + cmt_id)
+        comment.approve()
 
     @bot_threading.own_thread
     def track_users(self):
