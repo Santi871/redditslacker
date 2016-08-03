@@ -161,6 +161,10 @@ class RedditBot:
         comment.report(reason)
 
     @bot_threading.own_thread
+    def reset_user_tracks(self):
+        self.db.reset_user_tracks()
+
+    @bot_threading.own_thread
     def track_users(self):
         subreddit = self.r.get_subreddit(self.subreddit_name)
         ignored_users = ['ELI5_BotMod', 'AutoModerator']

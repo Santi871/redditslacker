@@ -44,7 +44,7 @@ class RequestsHandler:
                     response.add_attachment(text="Configuration parameter not found.", color='danger')
             else:
                 if args[0] == "tracksreset":
-                    self.reddit_bot.db.reset_user_tracks()
+                    self.reddit_bot.reset_user_tracks()
                     response = utils.SlackResponse()
                     response.add_attachment(text="User tracks reset successfully.", color='good')
 
