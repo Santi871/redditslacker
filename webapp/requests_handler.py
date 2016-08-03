@@ -51,7 +51,7 @@ class RequestsHandler:
                     response.add_attachment(text="User tracks reset successfully.", color='good')
                 elif args[0] == "reboot":
                     response = utils.SlackResponse()
-                    response.add_attachment(text="User tracks reset successfully.", color='good')
+                    response.add_attachment(text="Rebooting...", color='good')
                     response.post_to_channel(request.channel_name)
 
                     os.execl(sys.executable, sys.executable, *sys.argv)
