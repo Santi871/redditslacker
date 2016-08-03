@@ -49,7 +49,7 @@ class RequestsHandler:
                     self.reddit_bot.reset_user_tracks()
                     response = utils.SlackResponse()
                     response.add_attachment(text="User tracks reset successfully.", color='good')
-                elif args[0] == "reboot" and request.user == "santi871":
+                elif args[0] == "reboot":
                     response = utils.SlackResponse()
                     response.add_attachment(text="User tracks reset successfully.", color='good')
                     response.post_to_channel(request.channel_name)
