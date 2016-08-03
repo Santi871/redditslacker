@@ -101,6 +101,8 @@ class RedditSlackerDatabase:
             user_bans += 1
         elif log_type == "removecomment":
             user_comment_removals += 1
+        else:
+            return None
 
         if user_track is not None:
 

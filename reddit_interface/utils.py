@@ -273,10 +273,14 @@ def get_unflaired_submissions(r, submission_ids):
         flat_comments = praw.helpers.flatten_tree(submission.comments)
 
         for comment in flat_comments:
-            if comment.author.name.lower() == 'eli5_botmod':
-                unflaired_submission = UnflairedSubmission(submission, comment)
-                unflaired_submissions.append(unflaired_submission)
-                break
+
+            try:
+                if comment.author.name.lower() == 'eli5_botmod':
+                    unflaired_submission = UnflairedSubmission(submission, comment)
+                    unflaired_submissions.append(unflaired_submission)
+                    break
+            except AttributeError:
+                pass
 
     return unflaired_submissions
 

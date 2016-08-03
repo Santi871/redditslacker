@@ -174,7 +174,7 @@ class RedditBot:
                 if item.id not in self.already_done and item.target_author not in ignored_users:
                     user_dict = self.db.handle_mod_log(item)
 
-                    if item.target_author not in already_done_user:
+                    if item.target_author not in already_done_user and user_dict is not None:
 
                         done = False
 
