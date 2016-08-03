@@ -222,6 +222,7 @@ class SlackRequest:
             self.team_domain = self.form['team_domain']
             self.command = self.form['command']
             self.text = self.form['text']
+            self.channel_name = self.form['channel_name']
 
         self.response_url = self.form['response_url']
         self.token = self.form['token']

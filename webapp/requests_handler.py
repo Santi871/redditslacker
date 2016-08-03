@@ -2,6 +2,8 @@ import reddit_interface.bot as bot
 import reddit_interface.utils as utils
 import reddit_interface.database as db
 from puni import Note
+import os
+import sys
 
 
 class RequestsHandler:
@@ -43,10 +45,20 @@ class RequestsHandler:
                     response = utils.SlackResponse()
                     response.add_attachment(text="Configuration parameter not found.", color='danger')
             else:
-                if args[0] == "tracksreset":
+                if args[0] == "tracksreset" and request.user == "santi871":
                     self.reddit_bot.reset_user_tracks()
                     response = utils.SlackResponse()
                     response.add_attachment(text="User tracks reset successfully.", color='good')
+                elif args[0] == "reboot" and request.user == "santi871":
+                    response = utils.SlackResponse()
+                    response.add_attachment(text="User tracks reset successfully.", color='good')
+                    response.post_to_channel(request.channel_name)
+
+                    os.execl(sys.executable, sys.executable, *sys.argv)
+                else:
+                    response = utils.SlackResponse()
+                    response.add_attachment(text="Error: invalid parameter, or insufficient permissions.",
+                                            color='danger')
 
         return response
 
