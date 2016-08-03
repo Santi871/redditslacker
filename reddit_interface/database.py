@@ -122,6 +122,21 @@ class RedditSlackerDatabase:
 
         return return_dict
 
+    def reset_user_tracks(self):
+
+        cur = self.db.cursor()
+
+        cur.execute('''SELECT * FROM USER_TRACKS''')
+        user_tracks = cur.fetchall()
+
+        for track in user_tracks:
+            cur.execute('''REPLACE INTO USER_TRACKS(ID, USER_NAME, REMOVED_COMMENTS,
+                REMOVED_SUBMISSIONS, BANS, PERMAMUTED, TRACKED, SHADOWBANNED)
+                VALUES(?,?,?,?,?,?,?,?)''', (track[0], track[1],
+                                             0,
+                                             0,
+                                             0, track[5], track[6], track[7]))
+
     def fetch_user_log(self, username):
 
         print(username)

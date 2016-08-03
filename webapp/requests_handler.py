@@ -29,17 +29,24 @@ class RequestsHandler:
         elif request.command == '/rsconfig':
 
             args = request.text.split()
-            config_name = args[0]
-            value = args[1]
 
-            success = self.config.set_config(config_name, 'explainlikeimfive', value)
+            if len(args) > 1:
+                config_name = args[0]
+                value = args[1]
 
-            if success:
-                response = utils.SlackResponse()
-                response.add_attachment(text="Configuration updated successfully.", color='good')
+                success = self.config.set_config(config_name, 'explainlikeimfive', value)
+
+                if success:
+                    response = utils.SlackResponse()
+                    response.add_attachment(text="Configuration updated successfully.", color='good')
+                else:
+                    response = utils.SlackResponse()
+                    response.add_attachment(text="Configuration parameter not found.", color='danger')
             else:
-                response = utils.SlackResponse()
-                response.add_attachment(text="Configuration parameter not found.", color='danger')
+                if args[0] == "tracksreset":
+                    self.reddit_bot.db.reset_user_tracks()
+                    response = utils.SlackResponse()
+                    response.add_attachment(text="User tracks reset successfully.", color='good')
 
         return response
 
