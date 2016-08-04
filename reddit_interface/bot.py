@@ -346,6 +346,8 @@ class RedditBot:
                 submissions = r.get_subreddit('explainlikeimfive').get_new(limit=20)
 
                 for submission in submissions:
+                    print(submission.title)
+                    print(submission.link_flair_text)
 
                     if submission.author.name.lower() in tracked_users and submission.id not in self.already_done:
                         response = utils.SlackResponse(text="New submission by user /u/" + submission.author.name)
