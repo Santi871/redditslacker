@@ -15,12 +15,64 @@ SLACK_SLASHCMDS_SECRET = get_token("SLACK_SLASHCMDS_SECRET")
 SLACK_BOT_TOKEN = get_token('SLACK_BOT_TOKEN')
 
 
+def get_sub_name(team_id, filename='config.ini'):
+    config = configparser.ConfigParser()
+    config.read(filename)
+
+    for section in config.sections():
+        for key, val in config.items(section):
+            if key == "slackteam_id" and val == team_id:
+                return section
+    return None
+
+
+def get_config_sections(filename='config.ini'):
+    config = configparser.ConfigParser()
+    config.read(filename)
+    return config.sections()
+
+
 class RSConfig:
 
-    def __init__(self, filename):
+    def __init__(self, subreddit, filename='config.ini'):
         self.filename = filename
         self.config = configparser.ConfigParser()
         self.config.read(filename)
+        self.subreddit = subreddit
+        self.slackteam_id = None
+        self.mode = None
+        self.comment_warning_threshold = None
+        self.submission_warning_threshold = None
+        self.ban_warning_threshold = None
+        self.comment_warning_threshold_high = None
+        self.submission_warning_threshold_high = None
+        self.ban_warning_threshold_high = None
+        self.shadowbans_enabled = None
+        self.monitor_modmail = None
+        self.monitor_submissions = None
+        self.monitor_comments = None
+        self.monitor_modlog = None
+        self.remove_unflaired = None
+        self.bot_user_token = None
+
+        self._update()
+
+    def _update(self):
+
+        self.slackteam_id = self.config.get(self.subreddit, "slackteam_id")
+        self.mode = self.config.get(self.subreddit, "mode")
+        self.comment_warning_threshold = self.config.get(self.subreddit, "comment_warning_threshold")
+        self.comment_warning_threshold_high = self.config.get(self.subreddit, "comment_warning_threshold_high")
+        self.submission_warning_threshold = self.config.get(self.subreddit, "submission_warning_threshold")
+        self.submission_warning_threshold_high = self.config.get(self.subreddit, "submission_warning_threshold_high")
+        self.ban_warning_threshold = self.config.get(self.subreddit, "ban_warning_threshold")
+        self.ban_warning_threshold_high = self.config.get(self.subreddit, "ban_warning_threshold_high")
+        self.bot_user_token = self.config.get(self.subreddit, "bot_user_token")
+        self.monitor_modmail = self.config.getboolean(self.subreddit, "monitor_modmail")
+        self.monitor_modlog = self.config.getboolean(self.subreddit, "monitor_modlog")
+        self.monitor_submissions = self.config.getboolean(self.subreddit, "monitor_submissions")
+        self.monitor_comments = self.config.getboolean(self.subreddit, "monitor_comments")
+        self.remove_unflaired = self.config.getboolean(self.subreddit, "remove_unflaired")
 
     def get_config(self, name, section, var_type=None):
 
@@ -33,14 +85,14 @@ class RSConfig:
         elif var_type == "bool":
             return self.config.getboolean(section, name)
 
-    def set_config(self, name, section, value):
+    def set_config(self, name, value):
 
         try:
-            self.get_config(name, section)
+            self.get_config(name, self.subreddit)
         except configparser.NoOptionError:
             return False
 
-        self.config[section][name] = value
+        self.config[self.subreddit][name] = value
 
         with open(self.filename, 'w') as configfile:
             self.config.write(configfile)
@@ -166,12 +218,12 @@ class SlackResponse:
 
         return self.response_dict
 
-    def post_to_channel(self, channel, as_user=False):
+    def post_to_channel(self, token, channel, as_user=False):
 
         response_dict = self.get_dict()
         response_dict['attachments'] = json.dumps(self.response_dict['attachments'])
         response_dict['channel'] = channel
-        response_dict['token'] = SLACK_BOT_TOKEN
+        response_dict['token'] = token
 
         if as_user:
             response_dict['as_user'] = 'true'
@@ -213,6 +265,7 @@ class SlackRequest:
             self.user = self.form['user']['name']
             self.user_id = self.form['user']['id']
             self.team_domain = self.form['team']['domain']
+            self.team_id = self.form['team']['id']
             self.callback_id = self.form['callback_id']
             self.actions = self.form['actions']
             self.message_ts = self.form['message_ts']
@@ -220,6 +273,7 @@ class SlackRequest:
         else:
             self.user = self.form['user_name']
             self.team_domain = self.form['team_domain']
+            self.team_id = self.form['team_id']
             self.command = self.form['command']
             self.text = self.form['text']
             self.channel_name = self.form['channel_name']
@@ -308,9 +362,3 @@ Please [contact the moderators](%s) if you have any questions or concerns*
 """) % (s1, s3, s2)
 
     return comment
-
-
-
-
-
-

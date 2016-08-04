@@ -33,7 +33,7 @@ class RedditBot:
         except AssertionError:
             print("Bot authentication failed.")
 
-        self.subreddit_name = 'explainlikeimfive'
+        self.subreddit_name = config.subreddit
         self.un = puni.UserNotes(self.r, self.r.get_subreddit(self.subreddit_name))
 
         self.usergroup_owner = 'santi871'
@@ -45,10 +45,15 @@ class RedditBot:
         self.already_done = self.fetch_already_done("already_done.txt")
 
         if load_side_threads:
-            self.comments_feed()
-            self.track_users()
-            self.monitor_modmail()
-            self.handle_unflaired()
+
+            if config.monitor_comments:
+                self.comments_feed()
+            if config.monitor_modlog:
+                self.track_users()
+            if config.monitor_modmail():
+                self.monitor_modmail()
+            if config.remove_unflaired:
+                self.handle_unflaired()
 
     def _authenticate(self):
         o = OAuth2Util.OAuth2Util(self.r)
@@ -121,7 +126,8 @@ class RedditBot:
                         # response.attachments[0].add_button("Summary", "summary_" + comment.author.name)
                         response.attachments[0].add_button("Request ban", "banreq_" + comment.id)
 
-                        slack_response = response.post_to_channel('#tlc-feed')
+                        slack_response = response.post_to_channel(token=self.config.bot_user_token,
+                                                                  channel='#tlc-feed')
 
                     if comment.author.name.lower() in tracked_users:
                         response = utils.SlackResponse(text="New comment by user /u/" + comment.author.name)
@@ -130,7 +136,7 @@ class RedditBot:
                         response.add_attachment(title=comment.submission.title, title_link=comment.permalink,
                                                 text=comment.body, color="#warning")
 
-                        response.post_to_channel('#rs_feed')
+                        response.post_to_channel(token=self.config.bot_user_token, channel='#rs_feed')
 
                     self.already_done.append(comment.id)
 
@@ -182,23 +188,17 @@ class RedditBot:
 
                         done = False
 
-                        comment_warning_threshold = self.config.get_config('comment_warning_threshold',
-                                                                           'explainlikeimfive')
+                        comment_warning_threshold = self.config.comment_warning_threshold
 
-                        comment_warning_threshold_high = self.config.get_config('comment_warning_threshold_high',
-                                                                           'explainlikeimfive')
+                        comment_warning_threshold_high = self.config.comment_warning_threshold_high
 
-                        submission_warning_threshold = self.config.get_config('submission_warning_threshold',
-                                                                           'explainlikeimfive')
+                        submission_warning_threshold = self.config.submission_warning_threshold
 
-                        submission_warning_threshold_high = self.config.get_config('submission_warning_threshold_high',
-                                                                           'explainlikeimfive')
+                        submission_warning_threshold_high = self.config.submission_warning_threshold_high
 
-                        ban_warning_threshold = self.config.get_config('ban_warning_threshold',
-                                                                           'explainlikeimfive')
+                        ban_warning_threshold = self.config.ban_warning_threshold
 
-                        ban_warning_threshold_high = self.config.get_config('ban_warning_threshold_high',
-                                                                       'explainlikeimfive')
+                        ban_warning_threshold_high = self.config.ban_warning_threshold_high
 
                         if user_dict['comment_removals'] > comment_warning_threshold:
                             response = utils.SlackResponse()
@@ -210,7 +210,7 @@ class RedditBot:
                                                     color='warning', callback_id="userwarning")
                             response.attachments[0].add_button("Verify", value="verify", style='primary')
 
-                            response.post_to_channel('#rs_feed')
+                            response.post_to_channel(token=self.config.bot_user_token, channel='#rs_feed')
 
                             done = True
 
@@ -224,7 +224,7 @@ class RedditBot:
                                                     color='danger', callback_id="userwarning")
                             response.attachments[0].add_button("Verify", value="verify", style='primary')
 
-                            response.post_to_channel('#rs_feed')
+                            response.post_to_channel(token=self.config.bot_user_token, channel='#rs_feed')
 
                             done = True
 
@@ -237,7 +237,7 @@ class RedditBot:
                                                     color='warning', callback_id="userwarning")
                             response.attachments[0].add_button("Verify", value="verify", style="primary")
 
-                            response.post_to_channel('#rs_feed')
+                            response.post_to_channel(token=self.config.bot_user_token, channel='#rs_feed')
 
                             done = True
 
@@ -251,7 +251,7 @@ class RedditBot:
                                                     color='danger', callback_id="userwarning")
                             response.attachments[0].add_button("Verify", value="verify", style="primary")
 
-                            response.post_to_channel('#rs_feed')
+                            response.post_to_channel(token=self.config.bot_user_token, channel='#rs_feed')
 
                             done = True
 
@@ -265,7 +265,7 @@ class RedditBot:
                                                     color='warning', callback_id="userwarning")
                             response.attachments[0].add_button("Verify", value="verify", style='primary')
 
-                            response.post_to_channel('#rs_feed')
+                            response.post_to_channel(token=self.config.bot_user_token, channel='#rs_feed')
 
                             done = True
 
@@ -280,7 +280,7 @@ class RedditBot:
                                                     color='danger', callback_id="userwarning")
                             response.attachments[0].add_button("Verify", value="verify", style='primary')
 
-                            response.post_to_channel('#rs_feed')
+                            response.post_to_channel(token=self.config.bot_user_token, channel='#rs_feed')
 
                             done = True
 
@@ -353,7 +353,7 @@ class RedditBot:
                         response.add_attachment(title=submission.title, title_link=submission.permalink,
                                                 text=submission.body, color="#warning")
 
-                        response.post_to_channel('#rs_feed')
+                        response.post_to_channel(token=self.config.bot_user_token, channel='#rs_feed')
                         self.already_done.append(submission.id)
 
                         with open("already_done.txt", "a") as text_file:
@@ -657,7 +657,12 @@ class RedditBot:
         if request is not None:
             response = request.delayed_response(response)
 
-    def shadowban(self, username, author):
+    @bot_threading.own_thread
+    def shadowban(self, kwargs):
+
+        username = kwargs['username']
+        request = kwargs['request']
+        author = kwargs['author']
 
         """*!shadowban [user] [reason]:* Shadowbans [user] and adds usernote [reason] - USERNAME IS CASE SENSITIVE!"""
 
@@ -704,10 +709,14 @@ class RedditBot:
                                         text=traceback.format_exc(),
                                         color='danger')
 
-        return response
+            request.delayed_response(response)
 
-    def unshadowban(self, username, author):
+    @bot_threading.own_thread
+    def unshadowban(self, kwargs):
 
+        username = kwargs['username']
+        request = kwargs['request']
+        author = kwargs['author']
         response = utils.SlackResponse(text="Failed to unshadowban user.")
 
         if author in self.usergroup_mod:
@@ -734,4 +743,4 @@ class RedditBot:
                                         title="Exception",
                                         text=traceback.format_exc(),
                                         color='danger')
-        return response
+        request.delayed_response(response)

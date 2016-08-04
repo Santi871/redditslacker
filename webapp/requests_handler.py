@@ -4,17 +4,27 @@ import reddit_interface.database as db
 from puni import Note
 import os
 import sys
+from time import sleep
 
 
 class RequestsHandler:
 
     def __init__(self):
-        self.db = db.RedditSlackerDatabase('redditslacker_main.db')
-        self.config = utils.RSConfig("config.ini")
-        self.reddit_bot = bot.RedditBot(self.db, self.config)
+        sections = utils.get_config_sections()
+        self.configs = dict()
+        databases = dict()
+        self.bots = dict()
+        for section in sections:
+            self.configs[section] = utils.RSConfig(section)
+            databases[section] = db.RedditSlackerDatabase(section + ".db")
+
+        for sub, config in self.configs.items():
+            self.bots[sub] = bot.RedditBot(databases[sub], self.configs[sub])
+            sleep(5)
 
     def command_response(self, request):
         response = utils.SlackResponse(text="Processing your request... please allow a few seconds.")
+        sub = utils.get_sub_name(request.team_id)
 
         if request.command == '/user':
 
@@ -23,7 +33,7 @@ class RequestsHandler:
                 no_summary = None
                 if len(request.text.split()) == 2:
                     no_summary = request.text.split()[1]
-                self.reddit_bot.summary(username=username, request=request, no_summary=no_summary)
+                self.bots[sub].summary(username=username, request=request, no_summary=no_summary)
 
             else:
                 response = utils.SlackResponse("Usage: /user [username].")
@@ -36,7 +46,7 @@ class RequestsHandler:
                 config_name = args[0]
                 value = args[1]
 
-                success = self.config.set_config(config_name, 'explainlikeimfive', value)
+                success = self.configs[sub].set_config(config_name, value)
 
                 if success:
                     response = utils.SlackResponse()
@@ -46,13 +56,13 @@ class RequestsHandler:
                     response.add_attachment(text="Configuration parameter not found.", color='danger')
             else:
                 if args[0] == "tracksreset" and request.user == "santi871":
-                    self.reddit_bot.reset_user_tracks()
+                    self.bots[sub].reset_user_tracks()
                     response = utils.SlackResponse()
                     response.add_attachment(text="User tracks reset successfully.", color='good')
                 elif args[0] == "reboot":
                     response = utils.SlackResponse()
                     response.add_attachment(text="Rebooting...", color='good')
-                    response.post_to_channel(request.channel_name)
+                    response.post_to_channel(token=self.configs[sub].bot_user_token, channel=request.channel_name)
 
                     os.execl(sys.executable, sys.executable, *sys.argv)
                 else:
@@ -65,6 +75,7 @@ class RequestsHandler:
     def button_response(self, request):
 
         response = utils.SlackResponse(text="Processing your request... please allow a few seconds.")
+        sub = utils.get_sub_name(request.id)
         button_pressed = request.actions[0]['value'].split('_')[0]
         arg = '_'.join(request.actions[0]['value'].split('_')[1:]).lower()
         status_type = request.actions[0]['value'].split('_')[0]
@@ -79,25 +90,25 @@ class RequestsHandler:
             else:
                 n = Note(arg, "Unpermamuted via RedditSlacker by Slack user '%s'" % author,
                          arg, '', 'botban')
-            self.reddit_bot.un.add_note(n)
+            self.bots[sub].un.add_note(n)
 
-            self.reddit_bot.db.update_user_status(arg, status_type)
+            self.bots[sub].db.update_user_status(arg, status_type)
 
         elif button_pressed == "track":
             response = utils.SlackResponse(text="Tracking user.")
-            self.reddit_bot.db.update_user_status(arg, status_type)
+            self.bots[sub].db.update_user_status(arg, status_type)
 
         elif button_pressed == "untrack":
             response = utils.SlackResponse(text="Ceasing to track user.")
-            self.reddit_bot.db.update_user_status(arg, status_type)
+            self.bots[sub].db.update_user_status(arg, status_type)
 
         elif button_pressed == "shadowban":
-            response = self.reddit_bot.shadowban(arg, author)
-            self.reddit_bot.db.update_user_status(arg, status_type)
+            self.bots[sub].shadowban(username=arg, author=author, request=request)
+            self.bots[sub].db.update_user_status(arg, status_type)
 
         elif button_pressed == "unshadowban":
-            response = self.reddit_bot.unshadowban(arg, author)
-            self.reddit_bot.db.update_user_status(arg, status_type)
+            self.bots[sub].unshadowban(username=arg, author=author, request=request)
+            self.bots[sub].db.update_user_status(arg, status_type)
 
         elif button_pressed == "verify":
             attachment_args = utils.grab_attachment_args(request.original_message)
@@ -116,9 +127,9 @@ class RequestsHandler:
             response.attachments[0].add_field(title=attachment_args['field']['title'],
                                               value=attachment_args['field']['value'])
             response.attachments[0].add_button("Verify", value="verify", style='primary')
-            response.post_to_channel('#ban-requests')
+            response.post_to_channel(token=self.configs[sub].bot_user_token, channel='#ban-requests')
 
-            self.reddit_bot.report_comment(cmt_id=arg, reason="Slack user @%s has requested a ban." % author)
+            self.bots[sub].report_comment(cmt_id=arg, reason="Slack user @%s has requested a ban." % author)
 
             response = utils.SlackResponse()
             response.add_attachment(text=attachment_args['text'], title=attachment_args['title'],
@@ -137,7 +148,7 @@ class RequestsHandler:
             response.attachments[0].add_field(title=attachment_args['field']['title'],
                                               value=attachment_args['field']['value'])
 
-            self.reddit_bot.approve_comment(cmt_id=arg)
+            self.bots[sub].approve_comment(cmt_id=arg)
 
         elif button_pressed == "remove":
             attachment_args = utils.grab_attachment_args(request.original_message)
@@ -149,36 +160,10 @@ class RequestsHandler:
             response.attachments[0].add_field(title=attachment_args['field']['title'],
                                               value=attachment_args['field']['value'])
 
-            self.reddit_bot.remove_comment(cmt_id=arg)
+            self.bots[sub].remove_comment(cmt_id=arg)
 
         elif button_pressed == "summary":
-            self.reddit_bot.summary(request=request, username=arg, replace_original=False)
+            self.bots[sub].summary(request=request, username=arg, replace_original=False)
             response = None
 
         return response
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
