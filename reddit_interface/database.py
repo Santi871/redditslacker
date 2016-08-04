@@ -79,6 +79,9 @@ class RedditSlackerDatabase:
 
     def handle_mod_log(self, log):
 
+        if log.mod.lower() == "eli5_botmod":
+            return None
+
         cur = self.db.cursor()
         username = log.target_author
         log_type = log.action
