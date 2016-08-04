@@ -177,7 +177,7 @@ class RedditBot:
 
         while True:
             self.r._use_oauth = False
-            modlog = subreddit.get_mod_log(limit=100)
+            modlog = subreddit.get_mod_log(limit=30)
             already_done_user = []
 
             for item in modlog:
@@ -298,7 +298,7 @@ class RedditBot:
 
         while True:
             self.r._use_oauth = False
-            modmail = self.r.get_mod_mail('santi871', limit=100)
+            modmail = self.r.get_mod_mail('santi871', limit=10)
 
             muted_users = [track[1] for track in self.db.fetch_tracks("permamuted")]
 
@@ -342,7 +342,7 @@ class RedditBot:
             highest_timestamp = datetime.datetime.now() - datetime.timedelta(minutes=10)
             try:
                 self.r._use_oauth = False
-                submissions = r.get_subreddit('explainlikeimfive').get_new(limit=50)
+                submissions = r.get_subreddit('explainlikeimfive').get_new(limit=20)
 
                 for submission in submissions:
 
