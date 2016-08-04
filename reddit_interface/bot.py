@@ -449,6 +449,7 @@ class RedditBot:
         user_is_shadowbanned = user_status[5]
         combined_karma = user.link_karma + user.comment_karma
         account_creation = str(datetime.datetime.fromtimestamp(user.created_utc))
+        self.r._use_oauth = False
         last_note = self.get_last_note(username)
 
         response = utils.SlackResponse(replace_original=replace_original)
