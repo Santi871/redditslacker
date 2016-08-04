@@ -343,7 +343,7 @@ class RedditBot:
             highest_timestamp = datetime.datetime.now() - datetime.timedelta(minutes=10)
             try:
                 self.r._use_oauth = False
-                submissions = r.get_subreddit('explainlikeimfive').get_new(limit=20)
+                submissions = r.get_subreddit(self.subreddit_name).get_new(limit=20)
 
                 for submission in submissions:
 
@@ -365,7 +365,7 @@ class RedditBot:
                         submission.remove()
 
                         s1 = submission.author
-                        s2 = 'https://www.reddit.com/message/compose/?to=/r/explainlikeimfive'
+                        s2 = 'https://www.reddit.com/message/compose/?to=/r/' + self.subreddit_name
                         s3 = submission.permalink
 
                         comment = utils.generate_flair_comment(s1, s2, s3)
@@ -480,7 +480,7 @@ class RedditBot:
         else:
             response.attachments[0].add_button("Track", "track_" + username)
 
-        if self.config.get_config(section='explainlikeimfive', name="shadowbans_enabled", var_type='bool'):
+        if self.config.shadowbans_enabled:
             if user_is_shadowbanned == "Yes":
                 response.attachments[0].add_button("Unshadowban", "unshadowban_" + username, style='danger')
             else:
