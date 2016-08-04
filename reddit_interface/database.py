@@ -194,7 +194,6 @@ class RedditSlackerDatabase:
 
     def update_user_status(self, username, status_name):
         cur = self.db.cursor()
-        print(username)
 
         cur.execute('''SELECT * FROM USER_TRACKS WHERE USER_NAME = ?''', (username,))
         user_track = cur.fetchone()

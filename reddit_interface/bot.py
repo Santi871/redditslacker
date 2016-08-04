@@ -424,7 +424,7 @@ class RedditBot:
         no_summary = kwargs.get('no_summary', False)
         replace_original = kwargs.get('replace_original', False)
 
-        if no_summary == "nosummary":
+        if no_summary == "quick":
             no_summary = True
         else:
             no_summary = False
