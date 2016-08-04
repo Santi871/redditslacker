@@ -331,6 +331,7 @@ class RedditBot:
 
     @bot_threading.own_thread
     def handle_unflaired(self):
+        print("Starting handle_unflaired thread...")
 
         r = self.r
         submission_ids = self.fetch_already_done("unflaired_submissions.txt")
@@ -361,6 +362,7 @@ class RedditBot:
 
                     if submission.created > highest_timestamp.timestamp() and \
                                     submission.link_flair_text is None:
+                        print(submission.title)
                         submission.remove()
 
                         s1 = submission.author
