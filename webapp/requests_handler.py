@@ -24,6 +24,7 @@ class RequestsHandler:
 
     def command_response(self, request, form):
         response = utils.SlackResponse(text="Processing your request... please allow a few seconds.")
+        print(str(request.team_id))
         sub = utils.get_sub_name(request.team_id)
         self.databases[sub].log_command(form)
 

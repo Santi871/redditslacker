@@ -21,8 +21,6 @@ def get_sub_name(team_id, filename='config.ini'):
 
     for section in config.sections():
         for key, val in config.items(section):
-            print(str(key))
-            print(str(val))
             if key == "slackteam_id" and val == team_id:
                 return section
     return None
