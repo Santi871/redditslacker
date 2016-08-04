@@ -78,7 +78,7 @@ class RequestsHandler:
         response = utils.SlackResponse(text="Processing your request... please allow a few seconds.")
         sub = utils.get_sub_name(request.team_id)
         button_pressed = request.actions[0]['value'].split('_')[0]
-        arg = '_'.join(request.actions[0]['value'].split('_')[1:]).lower()
+        arg = '_'.join(request.actions[0]['value'].split('_')[1:])
         status_type = request.actions[0]['value'].split('_')[0]
         author = request.user
 
