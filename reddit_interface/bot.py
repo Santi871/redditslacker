@@ -340,14 +340,12 @@ class RedditBot:
 
         while True:
 
-            highest_timestamp = datetime.datetime.now() - datetime.timedelta(minutes=10)
+            highest_timestamp = datetime.datetime.utcnow() - datetime.timedelta(minutes=10)
             try:
                 self.r._use_oauth = False
                 submissions = r.get_subreddit('explainlikeimfive').get_new(limit=20)
 
                 for submission in submissions:
-                    print(submission.title)
-                    print(submission.link_flair_text)
 
                     if submission.author.name.lower() in tracked_users and submission.id not in self.already_done:
                         response = utils.SlackResponse(text="New submission by user /u/" + submission.author.name)
@@ -362,9 +360,8 @@ class RedditBot:
                         with open("already_done.txt", "a") as text_file:
                             print(submission.id + ",", end="", file=text_file)
 
-                    if submission.created > highest_timestamp.timestamp() and \
+                    if submission.created_utc > highest_timestamp.timestamp() and \
                                     submission.link_flair_text is None:
-                        print(submission.title)
                         submission.remove()
 
                         s1 = submission.author
