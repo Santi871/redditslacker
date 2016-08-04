@@ -10,8 +10,13 @@ class RequestsHandler:
 
     def __init__(self):
         self.db = db.RedditSlackerDatabase('redditslacker_main.db')
-        self.config = utils.RSConfig("config.ini")
-        self.reddit_bot = bot.RedditBot(self.db, self.config)
+
+        self.subs_config = dict()
+        for section in utils.get_config_sections():
+            sub_config = utils.RSConfig(section)
+            self.subs_config[section] = sub_config
+
+        self.reddit_bot = bot.RedditBot(self.db, self.subs_config['explainlikeimfive'])
 
     def command_response(self, request):
         response = utils.SlackResponse(text="Processing your request... please allow a few seconds.")
@@ -36,7 +41,7 @@ class RequestsHandler:
                 config_name = args[0]
                 value = args[1]
 
-                success = self.config.set_config(config_name, 'explainlikeimfive', value)
+                success = self.subs_config['explainlikeimfive'].set_config(config_name, value)
 
                 if success:
                     response = utils.SlackResponse()

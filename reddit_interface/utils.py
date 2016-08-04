@@ -15,12 +15,41 @@ SLACK_SLASHCMDS_SECRET = get_token("SLACK_SLASHCMDS_SECRET")
 SLACK_BOT_TOKEN = get_token('SLACK_BOT_TOKEN')
 
 
+def get_config_sections(name='config.ini'):
+    config = configparser.ConfigParser()
+    config.read(name)
+    return config.sections()
+
+
 class RSConfig:
 
-    def __init__(self, filename):
+    def __init__(self, subreddit, filename='config.ini'):
         self.filename = filename
         self.config = configparser.ConfigParser()
         self.config.read(filename)
+        self.subreddit = subreddit
+        self.slackteam_id = None
+        self.mode = None
+        self.comment_warning_threshold = None
+        self.submission_warning_threshold = None
+        self.ban_warning_threshold = None
+        self.comment_warning_threshold_high = None
+        self.submission_warning_threshold_high = None
+        self.ban_warning_threshold_high = None
+        self.shadowbans_enabled = None
+
+        self._update()
+
+    def _update(self):
+
+        self.slackteam_id = self.config.get(self.subreddit, "slackteam_id")
+        self.mode = self.config.get(self.subreddit, "mode")
+        self.comment_warning_threshold = self.config.get(self.subreddit, "comment_warning_threshold")
+        self.comment_warning_threshold_high = self.config.get(self.subreddit, "comment_warning_threshold_high")
+        self.submission_warning_threshold = self.config.get(self.subreddit, "submission_warning_threshold")
+        self.submission_warning_threshold_high = self.config.get(self.subreddit, "submission_warning_threshold_high")
+        self.ban_warning_threshold = self.config.get(self.subreddit, "ban_warning_threshold")
+        self.ban_warning_threshold_high = self.config.get(self.subreddit, "ban_warning_threshold_high")
 
     def get_config(self, name, section, var_type=None):
 
@@ -33,17 +62,19 @@ class RSConfig:
         elif var_type == "bool":
             return self.config.getboolean(section, name)
 
-    def set_config(self, name, section, value):
+    def set_config(self, name, value):
 
         try:
-            self.get_config(name, section)
+            self.get_config(name, self.subreddit)
         except configparser.NoOptionError:
             return False
 
-        self.config[section][name] = value
+        self.config[self.subreddit][name] = value
 
         with open(self.filename, 'w') as configfile:
             self.config.write(configfile)
+
+        self._update()
         return True
 
 
