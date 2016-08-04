@@ -90,7 +90,7 @@ class RedditSlackerDatabase:
         user_link_removals = 0
         user_bans = 0
 
-        cur.execute('''SELECT * FROM USER_TRACKS WHERE USER_NAME = ?''', (username,))
+        cur.execute('''SELECT * FROM USER_TRACKS WHERE USER_NAME = ? COLLATE NOCASE''', (username,))
         user_track = cur.fetchone()
 
         if user_track is not None:
@@ -144,7 +144,7 @@ class RedditSlackerDatabase:
 
         print(username)
         cur = self.db.cursor()
-        cur.execute('''SELECT * FROM USER_TRACKS WHERE USER_NAME = ?''', (username,))
+        cur.execute('''SELECT * FROM USER_TRACKS WHERE USER_NAME = ? COLLATE NOCASE''', (username,))
         user_track = cur.fetchone()
 
         if user_track is None:
@@ -195,7 +195,7 @@ class RedditSlackerDatabase:
     def update_user_status(self, username, status_name):
         cur = self.db.cursor()
 
-        cur.execute('''SELECT * FROM USER_TRACKS WHERE USER_NAME = ?''', (username,))
+        cur.execute('''SELECT * FROM USER_TRACKS WHERE USER_NAME = ? COLLATE NOCASE''', (username,))
         user_track = cur.fetchone()
 
         if user_track is not None:
