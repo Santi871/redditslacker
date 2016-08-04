@@ -382,7 +382,7 @@ class RedditBot:
 
                 for submission_object in unflaired_submissions:
 
-                    refreshed_submission = r.get_submission(submission_id=submission_object.submission.id)
+                    refreshed_submission = r.get_submission(submission_id=submission_object.id)
 
                     if refreshed_submission.link_flair_text is not None:
                         refreshed_submission.approve()
