@@ -340,7 +340,7 @@ class RedditBot:
 
         while True:
 
-            highest_timestamp = datetime.datetime.utcnow() - datetime.timedelta(minutes=10)
+            highest_timestamp = datetime.datetime.now() - datetime.timedelta(minutes=10)
             try:
                 self.r._use_oauth = False
                 submissions = r.get_subreddit('explainlikeimfive').get_new(limit=20)
@@ -360,7 +360,7 @@ class RedditBot:
                         with open("already_done.txt", "a") as text_file:
                             print(submission.id + ",", end="", file=text_file)
 
-                    if submission.created_utc > highest_timestamp.timestamp() and \
+                    if submission.created > highest_timestamp.timestamp() and \
                                     submission.link_flair_text is None:
                         submission.remove()
 
@@ -396,7 +396,7 @@ class RedditBot:
                         self.db.delete_unflaired_submissions_row(submission.id)
                     else:
 
-                        submission_time = datetime.datetime.fromtimestamp(submission.created_utc)
+                        submission_time = datetime.datetime.fromtimestamp(submission.created)
                         d = datetime.datetime.now() - submission_time
                         delta_time = d.total_seconds()
 
