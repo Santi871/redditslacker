@@ -50,7 +50,7 @@ class RedditBot:
                 self.comments_feed()
             if config.monitor_modlog:
                 self.track_users()
-            if config.monitor_modmail():
+            if config.monitor_modmail:
                 self.monitor_modmail()
             if config.remove_unflaired:
                 self.handle_unflaired()
