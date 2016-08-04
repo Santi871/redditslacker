@@ -1,14 +1,22 @@
 import reddit_interface.bot as bot
 import reddit_interface.utils as utils
 import reddit_interface.database as db
+from puni import Note
+import os
+import sys
 
 
 class RequestsHandler:
 
     def __init__(self):
         self.db = db.RedditSlackerDatabase('redditslacker_main.db')
-        self.config = utils.RSConfig("config.ini")
-        self.reddit_bot = bot.RedditBot(self.db, self.config)
+
+        self.subs_config = dict()
+        for section in utils.get_config_sections():
+            sub_config = utils.RSConfig(section)
+            self.subs_config[section] = sub_config
+
+        self.reddit_bot = bot.RedditBot(self.db, self.subs_config['explainlikeimfive'])
 
     def command_response(self, request):
         response = utils.SlackResponse(text="Processing your request... please allow a few seconds.")
@@ -28,17 +36,34 @@ class RequestsHandler:
         elif request.command == '/rsconfig':
 
             args = request.text.split()
-            config_name = args[0]
-            value = args[1]
 
-            success = self.config.set_config(config_name, 'explainlikeimfive', value)
+            if len(args) > 1:
+                config_name = args[0]
+                value = args[1]
 
-            if success:
-                response = utils.SlackResponse()
-                response.add_attachment(text="Configuration updated successfully.", color='good')
+                success = self.subs_config['explainlikeimfive'].set_config(config_name, value)
+
+                if success:
+                    response = utils.SlackResponse()
+                    response.add_attachment(text="Configuration updated successfully.", color='good')
+                else:
+                    response = utils.SlackResponse()
+                    response.add_attachment(text="Configuration parameter not found.", color='danger')
             else:
-                response = utils.SlackResponse()
-                response.add_attachment(text="Configuration parameter not found.", color='danger')
+                if args[0] == "tracksreset" and request.user == "santi871":
+                    self.reddit_bot.reset_user_tracks()
+                    response = utils.SlackResponse()
+                    response.add_attachment(text="User tracks reset successfully.", color='good')
+                elif args[0] == "reboot":
+                    response = utils.SlackResponse()
+                    response.add_attachment(text="Rebooting...", color='good')
+                    response.post_to_channel(request.channel_name)
+
+                    os.execl(sys.executable, sys.executable, *sys.argv)
+                else:
+                    response = utils.SlackResponse()
+                    response.add_attachment(text="Error: invalid parameter, or insufficient permissions.",
+                                            color='danger')
 
         return response
 
@@ -52,6 +77,15 @@ class RequestsHandler:
 
         if button_pressed == "permamute" or button_pressed == "unpermamute":
             response = utils.SlackResponse(text="Updated user status.")
+
+            if button_pressed == "permamute":
+                n = Note(arg, "Permamuted via RedditSlacker by Slack user '%s'" % author,
+                              arg, '', 'botban')
+            else:
+                n = Note(arg, "Unpermamuted via RedditSlacker by Slack user '%s'" % author,
+                         arg, '', 'botban')
+            self.reddit_bot.un.add_note(n)
+
             self.reddit_bot.db.update_user_status(arg, status_type)
 
         elif button_pressed == "track":
@@ -89,7 +123,7 @@ class RequestsHandler:
             response.attachments[0].add_button("Verify", value="verify", style='primary')
             response.post_to_channel('#ban-requests')
 
-            self.reddit_bot.remove_comment(cmt_id=arg)
+            self.reddit_bot.report_comment(cmt_id=arg, reason="Slack user @%s has requested a ban." % author)
 
             response = utils.SlackResponse()
             response.add_attachment(text=attachment_args['text'], title=attachment_args['title'],

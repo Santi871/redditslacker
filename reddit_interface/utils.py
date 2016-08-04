@@ -15,11 +15,41 @@ SLACK_SLASHCMDS_SECRET = get_token("SLACK_SLASHCMDS_SECRET")
 SLACK_BOT_TOKEN = get_token('SLACK_BOT_TOKEN')
 
 
+def get_config_sections(name='config.ini'):
+    config = configparser.ConfigParser()
+    config.read(name)
+    return config.sections()
+
+
 class RSConfig:
 
-    def __init__(self, filename):
+    def __init__(self, subreddit, filename='config.ini'):
+        self.filename = filename
         self.config = configparser.ConfigParser()
         self.config.read(filename)
+        self.subreddit = subreddit
+        self.slackteam_id = None
+        self.mode = None
+        self.comment_warning_threshold = None
+        self.submission_warning_threshold = None
+        self.ban_warning_threshold = None
+        self.comment_warning_threshold_high = None
+        self.submission_warning_threshold_high = None
+        self.ban_warning_threshold_high = None
+        self.shadowbans_enabled = None
+
+        self._update()
+
+    def _update(self):
+
+        self.slackteam_id = self.config.get(self.subreddit, "slackteam_id")
+        self.mode = self.config.get(self.subreddit, "mode")
+        self.comment_warning_threshold = self.config.get(self.subreddit, "comment_warning_threshold")
+        self.comment_warning_threshold_high = self.config.get(self.subreddit, "comment_warning_threshold_high")
+        self.submission_warning_threshold = self.config.get(self.subreddit, "submission_warning_threshold")
+        self.submission_warning_threshold_high = self.config.get(self.subreddit, "submission_warning_threshold_high")
+        self.ban_warning_threshold = self.config.get(self.subreddit, "ban_warning_threshold")
+        self.ban_warning_threshold_high = self.config.get(self.subreddit, "ban_warning_threshold_high")
 
     def get_config(self, name, section, var_type=None):
 
@@ -32,14 +62,19 @@ class RSConfig:
         elif var_type == "bool":
             return self.config.getboolean(section, name)
 
-    def set_config(self, name, section, value):
+    def set_config(self, name, value):
 
         try:
-            self.get_config(name, section)
+            self.get_config(name, self.subreddit)
         except configparser.NoOptionError:
             return False
 
-        self.config[section][name] = value
+        self.config[self.subreddit][name] = value
+
+        with open(self.filename, 'w') as configfile:
+            self.config.write(configfile)
+
+        self._update()
         return True
 
 
@@ -218,6 +253,7 @@ class SlackRequest:
             self.team_domain = self.form['team_domain']
             self.command = self.form['command']
             self.text = self.form['text']
+            self.channel_name = self.form['channel_name']
 
         self.response_url = self.form['response_url']
         self.token = self.form['token']
@@ -243,7 +279,10 @@ def grab_attachment_args(original_message):
 
     attachment_title_link = original_message['attachments'][0].get('title_link', '')
 
-    field = original_message['attachments'][0].get('fields', None)[0]
+    field = original_message['attachments'][0].get('fields', None)
+
+    if field is not None:
+        field = field[0]
 
     return {'text': attachment_text, 'title': attachment_title, 'title_link': attachment_title_link, 'field': field}
 
@@ -262,13 +301,18 @@ def get_unflaired_submissions(r, submission_ids):
     for submission_id in submission_ids:
         r._use_oauth = False
         submission = r.get_submission(submission_id=submission_id)
+        submission.replace_more_comments(limit=None, threshold=0)
         flat_comments = praw.helpers.flatten_tree(submission.comments)
 
         for comment in flat_comments:
-            if comment.author.name.lower() == 'eli5_botmod':
-                unflaired_submission = UnflairedSubmission(submission, comment)
-                unflaired_submissions.append(unflaired_submission)
-                break
+
+            try:
+                if comment.author.name.lower() == 'eli5_botmod':
+                    unflaired_submission = UnflairedSubmission(submission, comment)
+                    unflaired_submissions.append(unflaired_submission)
+                    break
+            except AttributeError:
+                pass
 
     return unflaired_submissions
 

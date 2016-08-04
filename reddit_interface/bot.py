@@ -12,6 +12,7 @@ import reddit_interface.bot_threading as bot_threading
 import traceback
 import puni
 import datetime
+import requests.exceptions
 
 SLACK_BOT_TOKEN = utils.get_token('SLACK_BOT_TOKEN')
 
@@ -152,6 +153,18 @@ class RedditBot:
         comment.approve()
 
     @bot_threading.own_thread
+    def report_comment(self, kwargs):
+        cmt_id = kwargs['cmt_id']
+        reason = kwargs['reason']
+        self.r._use_oauth = False
+        comment = self.r.get_info(thing_id="t1_" + cmt_id)
+        comment.report(reason)
+
+    @bot_threading.own_thread
+    def reset_user_tracks(self):
+        self.db.reset_user_tracks()
+
+    @bot_threading.own_thread
     def track_users(self):
         subreddit = self.r.get_subreddit(self.subreddit_name)
         ignored_users = ['ELI5_BotMod', 'AutoModerator']
@@ -165,7 +178,7 @@ class RedditBot:
                 if item.id not in self.already_done and item.target_author not in ignored_users:
                     user_dict = self.db.handle_mod_log(item)
 
-                    if item.target_author not in already_done_user:
+                    if item.target_author not in already_done_user and user_dict is not None:
 
                         done = False
 
@@ -278,7 +291,7 @@ class RedditBot:
 
                     with open("already_done.txt", "a") as text_file:
                         print(item.id + ",", end="", file=text_file)
-            sleep(120)
+            sleep(300)
 
     @bot_threading.own_thread
     def monitor_modmail(self):
@@ -300,7 +313,7 @@ class RedditBot:
 
                     with open("already_done.txt", "a") as text_file:
                         print(item.id + ",", end="", file=text_file)
-            sleep(120)
+            sleep(30)
 
     @staticmethod
     def remove_from_file(filename, str_to_remove):
@@ -329,12 +342,9 @@ class RedditBot:
             highest_timestamp = datetime.datetime.now() - datetime.timedelta(minutes=10)
             try:
                 self.r._use_oauth = False
-                submissions = r.get_subreddit('explainlikeimfive').get_new(limit=100)
+                submissions = r.get_subreddit('explainlikeimfive').get_new(limit=50)
 
                 for submission in submissions:
-
-                    if submission.mod_reports:
-                        print(str(submission.mod_reports))
 
                     if submission.author.name in tracked_users and submission.id not in self.already_done:
                         response = utils.SlackResponse(text="New submission by user /u/" + submission.author.name)
@@ -376,6 +386,10 @@ class RedditBot:
                     if refreshed_submission.link_flair_text is not None:
                         refreshed_submission.approve()
 
+                        for report in refreshed_submission.mod_reports:
+                            refreshed_submission.report(report[0])
+                            print(str(report))
+
                         submission_object.comment.delete()
                         unflaired_submissions.remove(submission_object)
                         self.remove_from_file("unflaired_submissions.txt", submission_object.submission.id)
@@ -390,10 +404,8 @@ class RedditBot:
                             unflaired_submissions.remove(submission_object)
                             submission_object.comment.delete()
 
-            except:
-                print("--------------\nUnexpected exception.\n--------------")
-                print(traceback.format_exc())
-                sleep(60)
+            except (requests.exceptions.HTTPError, praw.errors.HTTPException):
+                sleep(2)
                 continue
 
             sleep(120)
@@ -412,16 +424,12 @@ class RedditBot:
         no_summary = kwargs.get('no_summary', False)
         replace_original = kwargs.get('replace_original', False)
 
-        if no_summary == "nosummary":
+        if no_summary == "quick":
             no_summary = True
         else:
             no_summary = False
 
         user_status = self.db.fetch_user_log(username)
-        troll_likelihood = "Low"
-        total_comments_read = 0
-        color = 'good'
-        link = None
 
         try:
             user = self.r.get_redditor(username, fetch=True)
@@ -430,7 +438,56 @@ class RedditBot:
             response.add_attachment(fallback="Summary error.", title="Error: user not found.", color='danger')
             return request.delayed_response(response)
 
+        comment_removals = user_status[0]
+        link_removals = user_status[1]
+        bans = user_status[2]
+        user_is_permamuted = user_status[3]
+        user_is_tracked = user_status[4]
+        user_is_shadowbanned = user_status[5]
+        combined_karma = user.link_karma + user.comment_karma
+        account_creation = str(datetime.datetime.fromtimestamp(user.created_utc))
+        last_note = self.get_last_note(username)
+
+        response = utils.SlackResponse(replace_original=replace_original)
+        response.add_attachment(title='Summary for /u/' + user.name,
+                                title_link="https://www.reddit.com/user/" + username,
+                                color='#3AA3E3', callback_id='user_' + username)
+
+        response.attachments[0].add_field("Combined karma", combined_karma)
+        response.attachments[0].add_field("Redditor since", account_creation)
+        response.attachments[0].add_field("Removed comments", comment_removals)
+        response.attachments[0].add_field("Removed submissions", link_removals)
+        response.attachments[0].add_field("Bans", bans)
+        response.attachments[0].add_field("Shadowbanned", user_is_shadowbanned)
+        response.attachments[0].add_field("Permamuted", user_is_permamuted)
+        response.attachments[0].add_field("Tracked", user_is_tracked)
+        response.attachments[0].add_field("Latest usernote", last_note, short=False)
+
+        if user_is_permamuted == "Yes":
+            response.attachments[0].add_button("Unpermamute", "unpermamute_" + username)
+        else:
+            response.attachments[0].add_button("Permamute", "permamute_" + username,
+                                               confirm="The user will be permamuted. This action is reversible.",
+                                               yes="Permamute")
+
+        if user_is_tracked == "Yes":
+            response.attachments[0].add_button("Untrack", "untrack_" + username)
+        else:
+            response.attachments[0].add_button("Track", "track_" + username)
+
+        if self.config.get_config(section='explainlikeimfive', name="shadowbans_enabled", var_type='bool'):
+            if user_is_shadowbanned == "Yes":
+                response.attachments[0].add_button("Unshadowban", "unshadowban_" + username, style='danger')
+            else:
+                response.attachments[0].add_button("Shadowban", "shadowban_" + username, style='danger',
+                                                   confirm="The user will be shadowbanned. "
+                                                           "This action is reversible.",
+                                                   yes="Shadowban")
+
         if not no_summary:
+
+            troll_likelihood = "Low"
+            color = 'good'
             limit = 500
             i = 0
             total_comments = 0
@@ -486,12 +543,11 @@ class RedditBot:
             total_comments_read = i
 
             if not total_comments_read:
-                response = utils.SlackResponse()
                 response.add_attachment(fallback="Summary for /u/" + username,
                                         text="Summary error: user has no comments.",
                                         color='danger')
 
-                return response.response_dict
+                return request.delayed_response(response)
 
             troll_index *= limit / total_comments_read
 
@@ -593,52 +649,6 @@ class RedditBot:
 
             plt.clf()
 
-        comment_removals = user_status[0]
-        link_removals = user_status[1]
-        bans = user_status[2]
-        user_is_permamuted = user_status[3]
-        user_is_tracked = user_status[4]
-        user_is_shadowbanned = user_status[5]
-        combined_karma = user.link_karma + user.comment_karma
-        account_creation = str(datetime.datetime.fromtimestamp(user.created_utc))
-        last_note = self.get_last_note(username)
-
-        response = utils.SlackResponse(replace_original=replace_original)
-        response.add_attachment(title='Summary for /u/' + user.name,
-                                title_link="https://www.reddit.com/user/" + username,
-                                color='#3AA3E3', callback_id='user_' + username)
-
-        response.attachments[0].add_field("Combined karma", combined_karma)
-        response.attachments[0].add_field("Redditor since", account_creation)
-        response.attachments[0].add_field("Removed comments", comment_removals)
-        response.attachments[0].add_field("Removed submissions", link_removals)
-        response.attachments[0].add_field("Bans", bans)
-        response.attachments[0].add_field("Shadowbanned", user_is_shadowbanned)
-        response.attachments[0].add_field("Permamuted", user_is_permamuted)
-        response.attachments[0].add_field("Tracked", user_is_tracked)
-        response.attachments[0].add_field("Latest usernote", last_note, short=False)
-
-        if user_is_permamuted == "Yes":
-            response.attachments[0].add_button("Unpermamute", "unpermamute_" + username)
-        else:
-            response.attachments[0].add_button("Permamute", "permamute_" + username,
-                                               confirm="The user will be permamuted. This action is reversible.",
-                                               yes="Permamute")
-
-        if user_is_tracked == "Yes":
-            response.attachments[0].add_button("Untrack", "untrack_" + username)
-        else:
-            response.attachments[0].add_button("Track", "track_" + username)
-
-        if self.config.get_config(section='explainlikeimfive', name="shadowbans_enabled", var_type='bool'):
-            if user_is_shadowbanned == "Yes":
-                response.attachments[0].add_button("Unshadowban", "unshadowban_" + username, style='danger')
-            else:
-                response.attachments[0].add_button("Shadowban", "shadowban_" + username, style='danger',
-                                                   confirm="The user will be shadowbanned. This action is reversible.",
-                                                   yes="Shadowban")
-
-        if not no_summary:
             response.add_attachment(fallback="Summary for /u/" + username, image_url=link['link'],
                                     color=color)
             response.attachments[1].add_field("Troll likelihood", troll_likelihood)

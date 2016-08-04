@@ -59,3 +59,8 @@ def button_response():
 
     else:
         return "Invalid request token."
+
+
+@app.route('/redditslacker/status', methods=['GET'])
+def check_status():
+    return Response(), 200

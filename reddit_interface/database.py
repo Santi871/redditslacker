@@ -20,6 +20,17 @@ class RedditSlackerDatabase:
                 ARGS TEXT NOT NULL,
                 DATETIME TEXT NOT NULL)''')
 
+            self.db.execute('''CREATE TABLE IF NOT EXISTS BUTTONS_LOG
+                (ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                USER_NAME TEXT NOT NULL,
+                USER_ID TEXT NOT NULL,
+                TEAM_NAME TEXT NOT NULL,
+                TEAM_ID TEXT NOT NULL,
+                CHANNEL_NAME TEXT NOT NULL,
+                CHANNEL_ID TEXT NOT NULL,
+                BUTTON_PRESSED TEXT NOT NULL,
+                DATETIME TEXT NOT NULL)''')
+
             self.db.execute('''CREATE TABLE IF NOT EXISTS USER_TRACKS
                             (ID INTEGER PRIMARY KEY AUTOINCREMENT,
                             USER_NAME TEXT UNIQUE NOT NULL,
@@ -49,6 +60,23 @@ class RedditSlackerDatabase:
                                                                                                   channel_id,
                                                                                                   command, args))
 
+    def log_button(self, form):
+
+        cur = self.db.cursor()
+        user_name = form.user
+        user_id = form.user_id
+        team_name = form.team_domain
+        team_id = form.get('team_id')
+        channel_name = form.get('channel_name')
+        channel_id = form.get('channel_id')
+        button_pressed = form.actions[0]['value']
+
+        cur.execute('''INSERT INTO BUTTONS_LOG(USER_NAME, USER_ID, TEAM_NAME, TEAM_ID, CHANNEL_NAME, CHANNEL_ID,
+            BUTTON_PRESSED, DATETIME) VALUES(?,?,?,?,?,?,?,CURRENT_TIMESTAMP)''', (user_name, user_id,
+                                                                                    team_name,
+                                                                                    team_id, channel_name,
+                                                                                    channel_id, button_pressed))
+
     def handle_mod_log(self, log):
 
         cur = self.db.cursor()
@@ -73,6 +101,8 @@ class RedditSlackerDatabase:
             user_bans += 1
         elif log_type == "removecomment":
             user_comment_removals += 1
+        else:
+            return None
 
         if user_track is not None:
 
@@ -91,6 +121,21 @@ class RedditSlackerDatabase:
                        "bans": user_bans}
 
         return return_dict
+
+    def reset_user_tracks(self):
+
+        cur = self.db.cursor()
+
+        cur.execute('''SELECT * FROM USER_TRACKS''')
+        user_tracks = cur.fetchall()
+
+        for track in user_tracks:
+            cur.execute('''REPLACE INTO USER_TRACKS(ID, USER_NAME, REMOVED_COMMENTS,
+                REMOVED_SUBMISSIONS, BANS, PERMAMUTED, TRACKED, SHADOWBANNED)
+                VALUES(?,?,?,?,?,?,?,?)''', (track[0], track[1],
+                                             0,
+                                             0,
+                                             0, track[5], track[6], track[7]))
 
     def fetch_user_log(self, username):
 
@@ -115,7 +160,19 @@ class RedditSlackerDatabase:
                 is_shadowbanned = "Yes"
             else:
                 is_shadowbanned = "No"
-            track_info = (user_track[2], user_track[3], user_track[4], is_permamuted, is_tracked, is_shadowbanned)
+
+        comment_removals = user_track[2]
+        link_removals = user_track[3]
+        bans = user_track[4]
+
+        if not user_track[2]:
+            comment_removals = "None recorded"
+        if not user_track[3]:
+            link_removals = "None recorded"
+        if not user_track[4]:
+            bans = "None recorded"
+
+        track_info = (comment_removals, link_removals, bans, is_permamuted, is_tracked, is_shadowbanned)
 
         return track_info
 
