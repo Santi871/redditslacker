@@ -103,7 +103,7 @@ class RedditBot:
 
         while True:
 
-            tracked_users = [track[1] for track in self.db.fetch_tracks("tracked")]
+            tracked_users = [track[1].lower() for track in self.db.fetch_tracks("tracked")]
 
             self.r._use_oauth = False
             comments = self.r.get_subreddit(self.subreddit_name).get_comments(limit=100, sort='new')
@@ -335,7 +335,7 @@ class RedditBot:
         r = self.r
         submission_ids = self.fetch_already_done("unflaired_submissions.txt")
         unflaired_submissions = utils.get_unflaired_submissions(r, submission_ids)
-        tracked_users = [track[1] for track in self.db.fetch_tracks("tracked")]
+        tracked_users = [track[1].lower() for track in self.db.fetch_tracks("tracked")]
 
         while True:
 
@@ -346,7 +346,7 @@ class RedditBot:
 
                 for submission in submissions:
 
-                    if submission.author.name in tracked_users and submission.id not in self.already_done:
+                    if submission.author.name.lower() in tracked_users and submission.id not in self.already_done:
                         response = utils.SlackResponse(text="New submission by user /u/" + submission.author.name)
 
                         self.r._use_oauth = False

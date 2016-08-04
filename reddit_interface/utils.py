@@ -324,17 +324,8 @@ def get_unflaired_submissions(r, submission_ids):
     for submission_id in submission_ids:
         r._use_oauth = False
         submission = r.get_submission(submission_id=submission_id)
-        flat_comments = praw.helpers.flatten_tree(submission.comments)
-
-        for comment in flat_comments:
-
-            try:
-                if comment.author.name.lower() == 'eli5_botmod':
-                    unflaired_submission = UnflairedSubmission(submission, comment)
-                    unflaired_submissions.append(unflaired_submission)
-                    break
-            except AttributeError:
-                break
+        if submission_id.banned_by is not None:
+            unflaired_submissions.append(submission)
 
     return unflaired_submissions
 
