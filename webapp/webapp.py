@@ -35,8 +35,8 @@ def command():
     slack_request = utils.SlackRequest(request)
     if slack_request.is_valid:
 
-        commands_handler_obj.db.log_command(request.form)
-        response = commands_handler_obj.command_response(slack_request)
+        # commands_handler_obj.db.log_command(request.form)
+        response = commands_handler_obj.command_response(slack_request, form=request.form)
 
         return Response(response=response.get_json(), mimetype="application/json")
 

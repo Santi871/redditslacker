@@ -12,19 +12,20 @@ class RequestsHandler:
     def __init__(self):
         sections = utils.get_config_sections()
         self.configs = dict()
-        databases = dict()
+        self.databases = dict()
         self.bots = dict()
         for section in sections:
             self.configs[section] = utils.RSConfig(section)
-            databases[section] = db.RedditSlackerDatabase(section + ".db")
+            self.databases[section] = db.RedditSlackerDatabase(section + ".db")
 
         for sub, config in self.configs.items():
-            self.bots[sub] = bot.RedditBot(databases[sub], self.configs[sub])
+            self.bots[sub] = bot.RedditBot(self.databases[sub], self.configs[sub])
             sleep(5)
 
-    def command_response(self, request):
+    def command_response(self, request, form):
         response = utils.SlackResponse(text="Processing your request... please allow a few seconds.")
         sub = utils.get_sub_name(request.team_id)
+        self.databases[sub].log_command(form)
 
         if request.command == '/user':
 
