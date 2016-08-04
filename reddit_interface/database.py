@@ -284,8 +284,10 @@ class RedditSlackerDatabase:
         unflaired_submissions = []
 
         for row in data:
+            r._use_oauth = False
             submission = r.get_submission(submission_id=row[1])
             if submission.banned_by is not None:
+                r._use_oauth = False
                 comment = r.get_info(thing_id="t1_" + row[2])
                 unflaired_submission_obj = utils.UnflairedSubmission(submission, comment)
                 unflaired_submissions.append(unflaired_submission_obj)
