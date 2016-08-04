@@ -284,9 +284,9 @@ class RedditSlackerDatabase:
         unflaired_submissions = []
 
         for row in data:
-            submission = r.get_submission(submission_id=row[1].id)
+            submission = r.get_submission(submission_id=row[1])
             if submission.banned_by is not None:
-                comment = r.get_info(thing_id="t1_" + row[2].id)
+                comment = r.get_info(thing_id="t1_" + row[2])
                 unflaired_submission_obj = utils.UnflairedSubmission(submission, comment)
                 unflaired_submissions.append(unflaired_submission_obj)
 
