@@ -382,6 +382,8 @@ class RedditBot:
                 for unflaired_submission_obj in unflaired_submissions:
 
                     submission = unflaired_submission_obj.submission
+                    r._use_oauth = False
+                    submission = r.get_submission(submission_id=submission.id)
                     comment = unflaired_submission_obj.comment
 
                     if submission.link_flair_text is not None:
