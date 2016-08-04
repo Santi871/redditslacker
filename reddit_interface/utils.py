@@ -74,16 +74,8 @@ class RSConfig:
         self.monitor_comments = self.config.getboolean(self.subreddit, "monitor_comments")
         self.remove_unflaired = self.config.getboolean(self.subreddit, "remove_unflaired")
 
-    def get_config(self, name, section, var_type=None):
-
-        if var_type is None:
-            return self.config.getint(section, name)
-
-        elif var_type == 'str':
-            return str(self.config.get(section, name))
-
-        elif var_type == "bool":
-            return self.config.getboolean(section, name)
+    def get_config(self, name, section):
+        return self.config.get(section, name)
 
     def set_config(self, name, value):
 
