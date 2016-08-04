@@ -671,6 +671,15 @@ class RedditBot:
         r = self.r
         response = utils.SlackResponse(text='Usage: !shadowban [username] [reason]')
 
+        try:
+            user = self.r.get_redditor(username, fetch=True)
+        except praw.errors.NotFound:
+            response = utils.SlackResponse()
+            response.add_attachment(fallback="Shadowban error.", title="Error: user not found.", color='danger')
+            return request.delayed_response(response)
+
+        username = user.name
+
         if author in self.usergroup_mod:
 
             wiki_page = r.get_wiki_page(self.subreddit_name, "config/automoderator")
@@ -720,6 +729,15 @@ class RedditBot:
         request = kwargs['request']
         author = kwargs['author']
         response = utils.SlackResponse(text="Failed to unshadowban user.")
+
+        try:
+            user = self.r.get_redditor(username, fetch=True)
+        except praw.errors.NotFound:
+            response = utils.SlackResponse()
+            response.add_attachment(fallback="Shadowban error.", title="Error: user not found.", color='danger')
+            return request.delayed_response(response)
+
+        username = user.name
 
         if author in self.usergroup_mod:
             wiki_page = self.r.get_wiki_page(self.subreddit_name, "config/automoderator")
