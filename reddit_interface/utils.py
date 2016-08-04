@@ -324,7 +324,7 @@ def get_unflaired_submissions(r, submission_ids):
     for submission_id in submission_ids:
         r._use_oauth = False
         submission = r.get_submission(submission_id=submission_id)
-        if submission_id.banned_by is not None:
+        if submission.banned_by is not None:
             unflaired_submissions.append(submission)
 
     return unflaired_submissions
