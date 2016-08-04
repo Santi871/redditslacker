@@ -67,6 +67,7 @@ class RSConfig:
         self.submission_warning_threshold_high = self.config.getint(self.subreddit, "submission_warning_threshold_high")
         self.ban_warning_threshold = self.config.getint(self.subreddit, "ban_warning_threshold")
         self.ban_warning_threshold_high = self.config.getint(self.subreddit, "ban_warning_threshold_high")
+        self.shadowbans_enabled = self.config.getboolean(self.subreddit, "shadowbans_enabled")
         self.bot_user_token = self.config.get(self.subreddit, "bot_user_token")
         self.monitor_modmail = self.config.getboolean(self.subreddit, "monitor_modmail")
         self.monitor_modlog = self.config.getboolean(self.subreddit, "monitor_modlog")
