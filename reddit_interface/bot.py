@@ -12,6 +12,7 @@ import reddit_interface.bot_threading as bot_threading
 import traceback
 import puni
 import datetime
+import csv
 import requests.exceptions
 
 SLACK_BOT_TOKEN = utils.get_token('SLACK_BOT_TOKEN')
@@ -334,8 +335,7 @@ class RedditBot:
         print("Starting handle_unflaired thread...")
 
         r = self.r
-        submission_ids = self.fetch_already_done("unflaired_submissions.txt")
-        unflaired_submissions = utils.get_unflaired_submissions(r, submission_ids)
+        unflaired_submissions = self.db.fetch_unflaired_submissions(r)
         tracked_users = [track[1].lower() for track in self.db.fetch_tracks("tracked")]
 
         while True:
@@ -377,33 +377,33 @@ class RedditBot:
 
                         unflaired_submissions.append(unflaired_submission)
 
-                        with open("unflaired_submissions.txt", "a") as text_file:
-                            print(submission.id + ",", end="", file=text_file)
+                        self.db.log_unflaired_submission(submission.id, comment_obj.id)
 
-                for submission_object in unflaired_submissions:
+                for unflaired_submission_obj in unflaired_submissions:
 
-                    refreshed_submission = r.get_submission(submission_id=submission_object.id)
+                    submission = unflaired_submission_obj.submission
+                    comment = unflaired_submission_obj.comment
 
-                    if refreshed_submission.link_flair_text is not None:
-                        refreshed_submission.approve()
+                    if submission.link_flair_text is not None:
+                        submission.approve()
 
-                        for report in refreshed_submission.mod_reports:
-                            refreshed_submission.report(report[0])
+                        for report in submission.mod_reports:
+                            submission.report(report[0])
                             print(str(report))
 
-                        submission_object.comment.delete()
-                        unflaired_submissions.remove(submission_object)
-                        self.remove_from_file("unflaired_submissions.txt", submission_object.submission.id)
-
+                        comment.delete()
+                        unflaired_submissions.remove(unflaired_submission_obj)
+                        self.db.delete_unflaired_submissions_row(submission.id)
                     else:
 
-                        submission_time = datetime.datetime.fromtimestamp(refreshed_submission.created_utc)
+                        submission_time = datetime.datetime.fromtimestamp(submission.created_utc)
                         d = datetime.datetime.now() - submission_time
                         delta_time = d.total_seconds()
 
-                        if delta_time >= 10800:
-                            unflaired_submissions.remove(submission_object)
-                            submission_object.comment.delete()
+                        if delta_time >= 13600:
+                            unflaired_submissions.remove(unflaired_submission_obj)
+                            comment.delete()
+                            self.db.delete_unflaired_submissions_row(submission.id)
 
             except (requests.exceptions.HTTPError, praw.errors.HTTPException):
                 sleep(2)

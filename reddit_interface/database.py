@@ -1,4 +1,5 @@
 import sqlite3
+import reddit_interface.utils as utils
 
 
 class RedditSlackerDatabase:
@@ -30,6 +31,11 @@ class RedditSlackerDatabase:
                 CHANNEL_ID TEXT NOT NULL,
                 BUTTON_PRESSED TEXT NOT NULL,
                 DATETIME TEXT NOT NULL)''')
+
+            self.db.execute('''CREATE TABLE IF NOT EXISTS UNFLAIRED_SUBMISSIONS
+                (ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                SUBMISSION_ID TEXT NOT NULL,
+                COMMENT_ID TEXT NOT NULL)''')
 
             self.db.execute('''CREATE TABLE IF NOT EXISTS USER_TRACKS
                             (ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -262,5 +268,34 @@ class RedditSlackerDatabase:
             elif status_name == "unshadowban":
                 cur.execute('''INSERT INTO USER_TRACKS(USER_NAME, SHADOWBANNED)
                     VALUES(?,?)''', (username, 0))
+
+    def log_unflaired_submission(self, submission_id, comment_id):
+
+        cur = self.db.cursor()
+        cur.execute('''INSERT INTO UNFLAIRED_SUBMISSIONS(SUBMISSION_ID, COMMENT_ID) VALUES (?,?)''', (submission_id,
+                                                                                                      comment_id))
+
+    def fetch_unflaired_submissions(self, r):
+
+        cur = self.db.cursor()
+        cur.execute('''SELECT * FROM UNFLAIRED_SUBMISSIONS''')
+        data = cur.fetchall()
+
+        unflaired_submissions = []
+
+        for row in data:
+            submission = r.get_submission(submission_id=row[1].id)
+            if submission.banned_by is not None:
+                comment = r.get_info(thing_id="t1_" + row[2].id)
+                unflaired_submission_obj = utils.UnflairedSubmission(submission, comment)
+                unflaired_submissions.append(unflaired_submission_obj)
+
+        return unflaired_submissions
+
+    def delete_unflaired_submissions_row(self, submission_id):
+
+        cur = self.db.cursor()
+        cur.execute('''DELETE FROM UNFLAIRED_SUBMISSIONS WHERE SUBMISSION_ID = ?''', (submission_id,))
+
 
 
