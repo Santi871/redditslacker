@@ -101,6 +101,7 @@ class RedditBot:
     def get_comment_by_id(self, cmt_id):
 
         try:
+            self.r._use_oauth = False
             comment = self.r.get_info(thing_id='t1_' + cmt_id)
         except praw.errors.NotFound:
             comment = None
