@@ -58,24 +58,8 @@ class RequestsHandler:
                     url = url[:-1]
 
                 comment_id = url[-7:]
-                comment = self.bots[sub].get_comment_by_id(comment_id)
+                self.bots[sub].request_comment_ban(comment_id, author)
 
-                response = utils.SlackResponse()
-                if comment is None:
-                    response.add_attachment(text="Error: comment not found.", color='danger')
-                else:
-                    response = utils.SlackResponse(text="@%s has requested a ban. Comment:" % author)
-                    response.add_attachment(text=comment.body, title=comment.submission.title,
-                                            color='good', title_link=comment.submission.permalink,
-                                            callback_id='banreq')
-                    response.attachments[0].add_field(title="Author",
-                                                      value=comment.author.name)
-                    response.attachments[0].add_button("Verify", value="verify", style='primary')
-                    response.attachments[0].add_button("Track user", value="track_" + comment.author.name)
-                    response.post_to_channel(token=self.configs[sub].bot_user_token, channel='#ban-requests')
-
-                    comment.report("Slack user @%s has requested a ban." % author)
-                    response = utils.SlackResponse(text="Ban requested.")
             else:
                 response = utils.SlackResponse(text="Usage: /requestban [comment_id]")
 
