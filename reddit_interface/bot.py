@@ -12,7 +12,6 @@ import reddit_interface.bot_threading as bot_threading
 import traceback
 import puni
 import datetime
-import csv
 import requests.exceptions
 
 SLACK_BOT_TOKEN = utils.get_token('SLACK_BOT_TOKEN')

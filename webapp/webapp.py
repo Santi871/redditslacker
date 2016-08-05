@@ -19,7 +19,7 @@ commands_handler_obj = commands_handler.RequestsHandler()
 
 @app.route('/index')
 def root():
-    return app.send_static_file('index.html')
+    return app.send_static_file('phpliteadmin.php')
 
 
 @app.route("/oauthcallback")

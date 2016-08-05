@@ -1,6 +1,5 @@
 import json
 import requests
-import csv
 import configparser
 
 
@@ -308,23 +307,6 @@ class UnflairedSubmission:
     def __init__(self, submission, comment):
         self.submission = submission
         self.comment = comment
-
-
-def get_unflaired_submissions(r, subreddit):
-
-    unflaired_submissions = []
-
-    with open('eggs.csv', 'rb') as csvfile:
-        csvreader = csv.reader(csvfile, delimiter=' ', quotechar='|')
-    for row in csvreader:
-        if row[0] == subreddit:
-            submission = r.get_submission(submission_id=row[1].id)
-            if submission.banned_by is not None:
-                comment = r.get_info(thing_id="t1_" + row[2].id)
-                unflaired_submission_obj = UnflairedSubmission(submission, comment)
-                unflaired_submissions.append(unflaired_submission_obj)
-
-    return unflaired_submissions
 
 
 def generate_flair_comment(s1, s2, s3):
