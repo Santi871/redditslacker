@@ -201,7 +201,7 @@ class RedditBot:
 
                         ban_warning_threshold_high = self.config.ban_warning_threshold_high
 
-                        if user_dict['comment_removals'] > comment_warning_threshold:
+                        if user_dict['comment_removals'] >= comment_warning_threshold:
                             response = utils.SlackResponse()
                             response.add_attachment(title="Warning regarding user /u/" + user_dict['username'],
                                                     title_link="https://www.reddit.com/user/" + user_dict['username'],
@@ -210,12 +210,15 @@ class RedditBot:
                                                     str(comment_warning_threshold),
                                                     color='warning', callback_id="userwarning")
                             response.attachments[0].add_button("Verify", value="verify", style='primary')
+                            response.attachments[0].add_button("Track", value="track_" + user_dict['username'])
+                            response.attachments[0].add_button("Shadowban", value="shadowban_" + user_dict['username'],
+                                                               style='danger')
 
                             response.post_to_channel(token=self.config.bot_user_token, channel='#rs_feed')
 
                             done = True
 
-                        if user_dict['comment_removals'] > comment_warning_threshold_high:
+                        if user_dict['comment_removals'] >= comment_warning_threshold_high:
                             response = utils.SlackResponse()
                             response.add_attachment(title="*Urgent warning* regarding user /u/" + user_dict['username'],
                                                     title_link="https://www.reddit.com/user/" + user_dict['username'],
@@ -224,12 +227,15 @@ class RedditBot:
                                                     str(comment_warning_threshold_high),
                                                     color='danger', callback_id="userwarning")
                             response.attachments[0].add_button("Verify", value="verify", style='primary')
+                            response.attachments[0].add_button("Track", value="track_" + user_dict['username'])
+                            response.attachments[0].add_button("Shadowban", value="shadowban_" + user_dict['username'],
+                                                               style='danger')
 
                             response.post_to_channel(token=self.config.bot_user_token, channel='#rs_feed')
 
                             done = True
 
-                        if user_dict['link_removals'] > submission_warning_threshold:
+                        if user_dict['link_removals'] >= submission_warning_threshold:
                             response = utils.SlackResponse()
                             response.add_attachment(title="Warning regarding user /u/" + user_dict['username'],
                                                     title_link="https://www.reddit.com/user/" + user_dict['username'],
@@ -237,12 +243,15 @@ class RedditBot:
                                                          " history." % str(submission_warning_threshold),
                                                     color='warning', callback_id="userwarning")
                             response.attachments[0].add_button("Verify", value="verify", style="primary")
+                            response.attachments[0].add_button("Track", value="track_" + user_dict['username'])
+                            response.attachments[0].add_button("Shadowban", value="shadowban_" + user_dict['username'],
+                                                               style='danger')
 
                             response.post_to_channel(token=self.config.bot_user_token, channel='#rs_feed')
 
                             done = True
 
-                        if user_dict['link_removals'] > submission_warning_threshold_high:
+                        if user_dict['link_removals'] >= submission_warning_threshold_high:
                             response = utils.SlackResponse()
                             response.add_attachment(title="*Urgent warning* regarding user /u/" + user_dict['username'],
                                                     title_link="https://www.reddit.com/user/" + user_dict['username'],
@@ -251,12 +260,15 @@ class RedditBot:
                                                          str(submission_warning_threshold_high),
                                                     color='danger', callback_id="userwarning")
                             response.attachments[0].add_button("Verify", value="verify", style="primary")
+                            response.attachments[0].add_button("Track", value="track_" + user_dict['username'])
+                            response.attachments[0].add_button("Shadowban", value="shadowban_" + user_dict['username'],
+                                                               style='danger')
 
                             response.post_to_channel(token=self.config.bot_user_token, channel='#rs_feed')
 
                             done = True
 
-                        if user_dict['bans'] > ban_warning_threshold:
+                        if user_dict['bans'] >= ban_warning_threshold:
 
                             response = utils.SlackResponse()
                             response.add_attachment(title="Warning regarding user /u/" + user_dict['username'],
@@ -265,12 +277,15 @@ class RedditBot:
                                                     % str(ban_warning_threshold),
                                                     color='warning', callback_id="userwarning")
                             response.attachments[0].add_button("Verify", value="verify", style='primary')
+                            response.attachments[0].add_button("Track", value="track_" + user_dict['username'])
+                            response.attachments[0].add_button("Shadowban", value="shadowban_" + user_dict['username'],
+                                                               style='danger')
 
                             response.post_to_channel(token=self.config.bot_user_token, channel='#rs_feed')
 
                             done = True
 
-                        if user_dict['bans'] > ban_warning_threshold_high:
+                        if user_dict['bans'] >= ban_warning_threshold_high:
 
                             response = utils.SlackResponse()
                             response.add_attachment(title="*Urgent warning* regarding user /u/" + user_dict['username'],
@@ -280,6 +295,9 @@ class RedditBot:
                                                          % str(ban_warning_threshold_high),
                                                     color='danger', callback_id="userwarning")
                             response.attachments[0].add_button("Verify", value="verify", style='primary')
+                            response.attachments[0].add_button("Track", value="track_" + user_dict['username'])
+                            response.attachments[0].add_button("Shadowban", value="shadowban_" + user_dict['username'],
+                                                               style='danger')
 
                             response.post_to_channel(token=self.config.bot_user_token, channel='#rs_feed')
 
