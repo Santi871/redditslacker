@@ -26,6 +26,8 @@ class RequestsHandler:
         response = utils.SlackResponse(text="Processing your request... please allow a few seconds.")
         sub = utils.get_sub_name(request.team_id)
         self.databases[sub].log_command(form)
+        author = request.user
+        args = request.text.split()
 
         if request.command == '/user':
 
@@ -39,9 +41,45 @@ class RequestsHandler:
             else:
                 response = utils.SlackResponse("Usage: /user [username].")
 
-        elif request.command == '/rsconfig':
+        elif request.command == '/shadowban':
 
-            args = request.text.split()
+            if len(args) == 1:
+                target_user = args[0]
+                self.bots[sub].shadowban(username=target_user, author=author, request=request)
+                self.bots[sub].db.update_user_status(target_user, "shadowban")
+            else:
+                response = utils.SlackResponse(text="Usage: /shadowban [user]")
+
+        elif request.command == '/requestban':
+
+            if len(args) == 1:
+                url = args[0]
+                if url[-1] == '/':
+                    url = url[:-1]
+
+                comment_id = url[-6:]
+                comment = self.bots[sub].get_comment_by_id(comment_id)
+
+                response = utils.SlackResponse()
+                if comment is None:
+                    response.add_attachment(text="Error: comment not found.", color='danger')
+                else:
+                    response = utils.SlackResponse(text="@%s has requested a ban. Comment:" % author)
+                    response.add_attachment(text=comment.body, title=comment.submission.title,
+                                            color='good', title_link=comment.submission.permalink,
+                                            callback_id='banreq')
+                    response.attachments[0].add_field(title="Author",
+                                                      value=comment.author.name)
+                    response.attachments[0].add_button("Verify", value="verify", style='primary')
+                    response.attachments[0].add_button("Track user", value="track_" + comment.author.name)
+                    response.post_to_channel(token=self.configs[sub].bot_user_token, channel='#ban-requests')
+
+                    comment.report("Slack user @%s has requested a ban." % author)
+                    response = utils.SlackResponse(text="Ban requested.")
+            else:
+                response = utils.SlackResponse(text="Usage: /requestban [comment_id]")
+
+        elif request.command == '/rsconfig':
 
             if len(args) > 1:
                 config_name = args[0]
@@ -128,6 +166,7 @@ class RequestsHandler:
             response.attachments[0].add_field(title=attachment_args['field']['title'],
                                               value=attachment_args['field']['value'])
             response.attachments[0].add_button("Verify", value="verify", style='primary')
+            response.attachments[0].add_button("Track user", value="track_" + attachment_args['field']['value'])
             response.post_to_channel(token=self.configs[sub].bot_user_token, channel='#ban-requests')
 
             self.bots[sub].report_comment(cmt_id=arg, reason="Slack user @%s has requested a ban." % author)

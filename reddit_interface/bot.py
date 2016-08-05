@@ -98,6 +98,14 @@ class RedditBot:
 
         return redditor.name
 
+    def get_comment_by_id(self, cmt_id):
+
+        try:
+            comment = self.r.get_info(thing_id='t1_' + cmt_id)
+        except praw.errors.NotFound:
+            comment = None
+        return comment
+
     @bot_threading.own_thread
     def comments_feed(self):
 
@@ -685,10 +693,7 @@ class RedditBot:
         request = kwargs['request']
         author = kwargs['author']
 
-        """*!shadowban [user] [reason]:* Shadowbans [user] and adds usernote [reason] - USERNAME IS CASE SENSITIVE!"""
-
         r = self.r
-        response = utils.SlackResponse(text='Usage: !shadowban [username] [reason]')
 
         try:
             user = self.r.get_redditor(username, fetch=True)
