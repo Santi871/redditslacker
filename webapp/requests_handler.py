@@ -57,7 +57,7 @@ class RequestsHandler:
                 if url[-1] == '/':
                     url = url[:-1]
 
-                comment_id = url[-6:]
+                comment_id = url[-7:]
                 comment = self.bots[sub].get_comment_by_id(comment_id)
 
                 response = utils.SlackResponse()
