@@ -1,6 +1,6 @@
 import os
 import requests
-from flask import Flask, request, Response
+from flask import Flask, request, Response, send_from_directory
 from flask_sslify import SSLify
 import reddit_interface.utils as utils
 import webapp.requests_handler as commands_handler
@@ -11,15 +11,15 @@ SLACK_APP_SECRET = utils.get_token("SLACK_APP_SECRET")
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = '1'
 os.environ["OAUTHLIB_RELAX_TOKEN_SCOPE"] = '1'
 
-app = Flask(__name__, static_url_path='')
+app = Flask(__name__, static_folder='static', static_url_path='/static')
 sslify = SSLify(app)
 app.secret_key = APP_SECRET_KEY
 commands_handler_obj = commands_handler.RequestsHandler()
 
 
-@app.route('/index')
-def root():
-    return app.send_static_file('phpliteadmin.php')
+@app.route('/phpliteadmin.php')
+def static_from_root():
+    return send_from_directory(app.static_folder, request.path[1:])
 
 
 @app.route("/oauthcallback")
