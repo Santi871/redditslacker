@@ -58,7 +58,7 @@ class RequestsHandler:
                     url = url[:-1]
 
                 comment_id = url[-7:]
-                self.bots[sub].request_comment_ban(comment_id, author)
+                self.bots[sub].request_comment_ban(comment_id, request)
 
             else:
                 response = utils.SlackResponse(text="Usage: /requestban [comment_id]")
