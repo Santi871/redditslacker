@@ -143,9 +143,11 @@ class RedditBot:
     @bot_threading.own_thread
     def log_bans(self):
 
+        limit = None
+
         while True:
             self.r._use_oauth = False
-            bans = self.r.get_subreddit(self.subreddit_name).get_banned(limit=None)
+            bans = self.r.get_subreddit(self.subreddit_name).get_banned(limit=limit)
 
             for ban in bans:
                     self.db.log_ban(ban)
