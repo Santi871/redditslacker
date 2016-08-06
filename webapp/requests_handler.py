@@ -100,6 +100,11 @@ class RequestsHandler:
                     response.post_to_channel(token=self.configs[sub].bot_user_token, channel=request.channel_name)
 
                     os.execl(sys.executable, sys.executable, *sys.argv)
+                elif args[0] == "list":
+                    config_str = self.configs[sub].list_config()
+                    response = utils.SlackResponse(text="Showing configuration for RedditSlacker")
+                    response.add_attachment(text=config_str, color='good')
+
                 else:
                     response = utils.SlackResponse()
                     response.add_attachment(text="Error: invalid parameter, or insufficient permissions.",

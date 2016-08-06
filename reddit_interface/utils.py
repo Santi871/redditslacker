@@ -90,6 +90,15 @@ class RSConfig:
             self.config.write(configfile)
         return True
 
+    def list_config(self):
+        config_str = ""
+
+        for key, val in self.config.items(self.subreddit):
+            if key != "bot_user_token":
+                config_str += key + " = " + val + "\n"
+
+        return config_str
+
 
 class SlackButton:
 
