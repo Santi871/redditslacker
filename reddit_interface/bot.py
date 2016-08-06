@@ -80,6 +80,9 @@ class RedditBot:
         with open(filename, 'w') as text_file:
             text_file.write(','.join(already_done))
 
+        with open(filename, "r") as text_file:
+            already_done = text_file.read().split(",")
+
         return already_done
 
     def get_last_note(self, username):
