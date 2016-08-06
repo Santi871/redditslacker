@@ -55,6 +55,8 @@ class RedditBot:
             if config.remove_unflaired:
                 self.handle_unflaired()
 
+            self.log_bans()
+
     def _authenticate(self):
         o = OAuth2Util.OAuth2Util(self.r)
         o.refresh(force=True)
@@ -145,7 +147,7 @@ class RedditBot:
 
         while True:
             self.r._use_oauth = False
-            bans = self.r.get_subreddit(self.subreddit_name).get_banned(limit=limit)
+            bans = self.r.get_subreddit(self.subreddit_name).get_banned(limit=limit, user_only=False)
 
             for ban in bans:
                     self.db.log_ban(ban)
