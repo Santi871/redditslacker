@@ -110,7 +110,7 @@ class RedditSlackerDatabase:
     def get_ban_note(self, username):
         cur = self.db.cursor()
 
-        cur.execute('''SELECT * FROM BANS_LOG WHERE NAME = ?''', (username,))
+        cur.execute('''SELECT * FROM BANS_LOG WHERE NAME = ? COLLATE NOCASE''', (username,))
         ban = cur.fetchone()
 
         if ban is None:
