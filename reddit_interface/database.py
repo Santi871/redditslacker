@@ -107,6 +107,17 @@ class RedditSlackerDatabase:
         except:
             print(traceback.format_exc())
 
+    def get_ban_note(self, username):
+        cur = self.db.cursor()
+
+        cur.execute('''SELECT * FROM BANS_LOG WHERE NAME = ?''', (username,))
+        ban = cur.fetchone()
+
+        if ban is None:
+            return None
+        else:
+            return ban[2]
+
     def handle_mod_log(self, log):
 
         if log.mod.lower() == "eli5_botmod":
