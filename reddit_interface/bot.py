@@ -68,7 +68,7 @@ class RedditBot:
             with open(filename, "r") as text_file:
                 already_done = text_file.read().split(",")
 
-                if int(os.stat('already_done.txt').st_size[:-1]) >= 409600:
+                if int(os.stat('already_done.txt').st_size) >= 409600:
                     already_done = already_done[int(len(already_done) * 0.75):]
                 try:
                     already_done.remove('')
