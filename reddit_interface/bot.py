@@ -760,7 +760,7 @@ class RedditBot:
         username = user.name
 
         if author in self.usergroup_mod:
-
+            self.r._use_oauth = False
             wiki_page = r.get_wiki_page(self.subreddit_name, "config/automoderator")
             wiki_page_content = wiki_page.content_md
 
@@ -778,6 +778,7 @@ class RedditBot:
                          wiki_page_content[end_ind:]
 
                 if not self.debug:
+                    self.r._use_oauth = False
                     r.edit_wiki_page(self.subreddit_name, "config/automoderator", newstr,
                                      reason='RedditSlacker shadowban user "/u/%s" executed by Slack user "%s"'
                                             % (username, author))
@@ -819,6 +820,7 @@ class RedditBot:
         username = user.name
 
         if author in self.usergroup_mod:
+            self.r._use_oauth= False
             wiki_page = self.r.get_wiki_page(self.subreddit_name, "config/automoderator")
             wiki_page_content = wiki_page.content_md
 
@@ -829,6 +831,7 @@ class RedditBot:
                               username, '', 'botban')
 
                 if not self.debug:
+                    self.r._use_oauth = False
                     self.r.edit_wiki_page(self.subreddit_name, "config/automoderator", wiki_page_content,
                                           reason='RedditSlacker unshadowban user "/u/%s" executed by Slack user "%s"'
                                                  % (username, author))
