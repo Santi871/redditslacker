@@ -67,7 +67,7 @@ class RedditBot:
         try:
             with open(filename, "r") as text_file:
                 already_done = text_file.read().split(",")
-
+                already_done = already_done[int(len(already_done) * 0.75):]
                 try:
                     already_done.remove('')
                 except ValueError:
@@ -76,6 +76,9 @@ class RedditBot:
         except FileNotFoundError:
             with open(filename, "a+"):
                 pass
+
+        with open(filename, 'w') as text_file:
+            text_file.write(','.join(already_done))
 
         return already_done
 
