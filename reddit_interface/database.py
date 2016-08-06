@@ -94,11 +94,13 @@ class RedditSlackerDatabase:
     def log_ban(self, ban):
         cur = self.db.cursor()
 
-        date_time = datetime.datetime.fromtimestamp(ban.date)
+        date_time = datetime.datetime.fromtimestamp(ban['date'])
 
         try:
-            cur.execute('''INSERT INTO BANS_LOG(NAME, USER_ID, NOTE, DATE_TIME) VALUES (?,?,?,?)''', (ban.name, ban.id,
-                                                                                                  ban.note, date_time))
+            cur.execute('''INSERT INTO BANS_LOG(NAME, USER_ID, NOTE, DATE_TIME) VALUES (?,?,?,?)''', (ban['user'],
+                                                                                                      ban['id'],
+                                                                                                  ban['note'],
+                                                                                                      date_time))
         except Exception as e:
             print(e)
 
