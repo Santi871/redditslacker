@@ -22,6 +22,18 @@ class RequestsHandler:
             self.bots[sub] = bot.RedditBot(self.databases[sub], self.configs[sub])
             sleep(5)
 
+        self.temp_team_id = None
+        self.temp_bot_token = None
+
+    def handle_new_subreddit(self, oauth_response):
+        self.temp_team_id = oauth_response.get('team_id')
+        self.temp_bot_token = oauth_response.get('bot').get('bot_access_token')
+
+        return "Hello! To begin, please enter `/rsconfig subreddit [your-subreddit-name]` to bind your Slack " \
+               "team to your subreddit.\nHave in mind that /u/RedditSlacker should be a moderator of the subreddit," \
+               "with its permissions set according to your desired usage of RedditSlacker. View the documentation for" \
+               " information on moderator permissions: https://santi871.github.io/redditslacker"
+
     def command_response(self, request, form):
         response = utils.SlackResponse(text="Processing your request... please allow a few seconds.")
         sub = utils.get_sub_name(request.team_id)
