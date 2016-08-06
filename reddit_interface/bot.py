@@ -783,6 +783,7 @@ class RedditBot:
                                      reason='RedditSlacker shadowban user "/u/%s" executed by Slack user "%s"'
                                             % (username, author))
 
+                    self.r._use_oauth = False
                     self.un.add_note(n)
 
                 response = utils.SlackResponse(text="User */u/%s* has been shadowbanned." % username)
@@ -836,6 +837,7 @@ class RedditBot:
                                           reason='RedditSlacker unshadowban user "/u/%s" executed by Slack user "%s"'
                                                  % (username, author))
 
+                    self.r._use_oauth = False
                     self.un.add_note(n)
 
                 response = utils.SlackResponse(text="User */u/%s* has been unshadowbanned." % username)
