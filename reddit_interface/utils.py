@@ -52,6 +52,7 @@ class RSConfig:
         self.monitor_modlog = None
         self.remove_unflaired = None
         self.bot_user_token = None
+        self.banlist_populated = None
 
         self._update()
 
@@ -71,14 +72,15 @@ class RSConfig:
         self.monitor_submissions = self.config.getboolean(self.subreddit, "monitor_submissions")
         self.monitor_comments = self.config.getboolean(self.subreddit, "monitor_comments")
         self.remove_unflaired = self.config.getboolean(self.subreddit, "remove_unflaired")
+        self.banlist_populated = self.config.getboolean(self.subreddit, "banlist_populated")
 
-    def get_config(self, name, section):
-        return self.config.get(section, name)
+    def get_config(self, name):
+        return self.config.get(self.subreddit, name)
 
     def set_config(self, name, value):
 
         try:
-            self.get_config(name, self.subreddit)
+            self.get_config(name)
         except configparser.NoOptionError:
             return False
 

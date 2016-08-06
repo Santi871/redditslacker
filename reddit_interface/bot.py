@@ -143,7 +143,10 @@ class RedditBot:
     @bot_threading.own_thread
     def log_bans(self):
 
-        limit = None
+        if not self.config.banlist_populated:
+            limit = None
+        else:
+            limit = 20
 
         while True:
             self.r._use_oauth = False
