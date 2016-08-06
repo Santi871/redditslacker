@@ -44,7 +44,7 @@ class RedditSlackerDatabase:
                 NAME TEXT NOT NULL,
                 USER_ID TEXT NOT NULL UNIQUE,
                 NOTE TEXT NOT NULL,
-                DATETIME TEXT NOT NULL)''')
+                DATE_TIME TEXT NOT NULL)''')
 
             self.db.execute('''CREATE TABLE IF NOT EXISTS USER_TRACKS
                             (ID INTEGER PRIMARY KEY AUTOINCREMENT,
