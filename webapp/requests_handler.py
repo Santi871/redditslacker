@@ -75,6 +75,15 @@ class RequestsHandler:
             else:
                 response = utils.SlackResponse(text="Usage: /requestban [comment_id]")
 
+        elif request.command == "/track":
+
+            if len(args) == 1:
+                user = args[0]
+                self.bots[sub].db.update_user_status(user, "track")
+                response = utils.SlackResponse(text="Tracking user.")
+            else:
+                response = utils.SlackResponse(text="Usage: /track [user]")
+
         elif request.command == '/rsconfig':
 
             if len(args) > 1:

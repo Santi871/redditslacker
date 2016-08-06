@@ -39,7 +39,6 @@ class RSConfig:
         self.config.read(filename)
         self.subreddit = subreddit
         self.slackteam_id = None
-        self.mode = None
         self.comment_warning_threshold = None
         self.submission_warning_threshold = None
         self.ban_warning_threshold = None
@@ -59,7 +58,6 @@ class RSConfig:
     def _update(self):
 
         self.slackteam_id = self.config.get(self.subreddit, "slackteam_id")
-        self.mode = self.config.get(self.subreddit, "mode")
         self.comment_warning_threshold = self.config.getint(self.subreddit, "comment_warning_threshold")
         self.comment_warning_threshold_high = self.config.getint(self.subreddit, "comment_warning_threshold_high")
         self.submission_warning_threshold = self.config.getint(self.subreddit, "submission_warning_threshold")
