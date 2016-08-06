@@ -55,8 +55,6 @@ class RedditBot:
             if config.remove_unflaired:
                 self.handle_unflaired()
 
-            self.log_bans()
-
     def _authenticate(self):
         o = OAuth2Util.OAuth2Util(self.r)
         o.refresh(force=True)
