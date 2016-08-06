@@ -45,6 +45,7 @@ pip-delete-this-directory.txt
 /modlog_alreadydone.txt
 /unflaired_submissions.txt
 /bot_status_check.py
+/webapp/static/phpliteadmin.config.php
 /already_done.txt
 /redditslacker_main.db
 

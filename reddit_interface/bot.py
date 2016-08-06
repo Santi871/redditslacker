@@ -33,7 +33,7 @@ class RedditBot:
         except AssertionError:
             print("Bot authentication failed.")
 
-        self.subreddit_name = 'explainlikeimfive'
+        self.subreddit_name = config.subreddit
         self.un = puni.UserNotes(self.r, self.r.get_subreddit(self.subreddit_name))
 
         self.usergroup_owner = 'santi871'
@@ -45,10 +45,15 @@ class RedditBot:
         self.already_done = self.fetch_already_done("already_done.txt")
 
         if load_side_threads:
-            self.comments_feed()
-            self.track_users()
-            self.monitor_modmail()
-            self.handle_unflaired()
+
+            if config.monitor_comments:
+                self.comments_feed()
+            if config.monitor_modlog:
+                self.track_users()
+            if config.monitor_modmail:
+                self.monitor_modmail()
+            if config.remove_unflaired:
+                self.handle_unflaired()
 
     def _authenticate(self):
         o = OAuth2Util.OAuth2Util(self.r)
@@ -94,11 +99,43 @@ class RedditBot:
         return redditor.name
 
     @bot_threading.own_thread
+    def request_comment_ban(self, kwargs):
+
+        cmt_id = kwargs['cmt_id']
+        request = kwargs['request']
+        author = request.user
+
+        try:
+            self.r._use_oauth = False
+            comment = self.r.get_info(thing_id='t1_' + cmt_id)
+        except praw.errors.NotFound:
+            comment = None
+
+        response = utils.SlackResponse()
+        if comment is None:
+            response.add_attachment(text="Error: comment not found.", color='danger')
+            request.delayed_response(response)
+        else:
+            response = utils.SlackResponse(text="@%s has requested a ban. Comment:" % author)
+            response.add_attachment(text=comment.body, title=comment.submission.title,
+                                    color='good', title_link=comment.submission.permalink,
+                                    callback_id='banreq')
+            response.attachments[0].add_field(title="Author",
+                                              value=comment.author.name)
+            response.attachments[0].add_button("Verify", value="verify", style='primary')
+            response.attachments[0].add_button("Track user", value="track_" + comment.author.name)
+            response.post_to_channel(token=self.config.bot_user_token, channel='#ban-requests')
+
+            comment.report("Slack user @%s has requested a ban." % author)
+            response = utils.SlackResponse(text="Ban requested.")
+            request.delayed_response(response)
+
+    @bot_threading.own_thread
     def comments_feed(self):
 
         while True:
 
-            tracked_users = [track[1] for track in self.db.fetch_tracks("tracked")]
+            tracked_users = [track[1].lower() for track in self.db.fetch_tracks("tracked")]
 
             self.r._use_oauth = False
             comments = self.r.get_subreddit(self.subreddit_name).get_comments(limit=100, sort='new')
@@ -121,7 +158,8 @@ class RedditBot:
                         # response.attachments[0].add_button("Summary", "summary_" + comment.author.name)
                         response.attachments[0].add_button("Request ban", "banreq_" + comment.id)
 
-                        slack_response = response.post_to_channel('#tlc-feed')
+                        slack_response = response.post_to_channel(token=self.config.bot_user_token,
+                                                                  channel='#tlc-feed')
 
                     if comment.author.name.lower() in tracked_users:
                         response = utils.SlackResponse(text="New comment by user /u/" + comment.author.name)
@@ -130,7 +168,7 @@ class RedditBot:
                         response.add_attachment(title=comment.submission.title, title_link=comment.permalink,
                                                 text=comment.body, color="#warning")
 
-                        response.post_to_channel('#rs_feed')
+                        response.post_to_channel(token=self.config.bot_user_token, channel='#rs_feed')
 
                     self.already_done.append(comment.id)
 
@@ -171,7 +209,7 @@ class RedditBot:
 
         while True:
             self.r._use_oauth = False
-            modlog = subreddit.get_mod_log(limit=100)
+            modlog = subreddit.get_mod_log(limit=30)
             already_done_user = []
 
             for item in modlog:
@@ -182,25 +220,19 @@ class RedditBot:
 
                         done = False
 
-                        comment_warning_threshold = self.config.get_config('comment_warning_threshold',
-                                                                           'explainlikeimfive')
+                        comment_warning_threshold = self.config.comment_warning_threshold
 
-                        comment_warning_threshold_high = self.config.get_config('comment_warning_threshold_high',
-                                                                           'explainlikeimfive')
+                        comment_warning_threshold_high = self.config.comment_warning_threshold_high
 
-                        submission_warning_threshold = self.config.get_config('submission_warning_threshold',
-                                                                           'explainlikeimfive')
+                        submission_warning_threshold = self.config.submission_warning_threshold
 
-                        submission_warning_threshold_high = self.config.get_config('submission_warning_threshold_high',
-                                                                           'explainlikeimfive')
+                        submission_warning_threshold_high = self.config.submission_warning_threshold_high
 
-                        ban_warning_threshold = self.config.get_config('ban_warning_threshold',
-                                                                           'explainlikeimfive')
+                        ban_warning_threshold = self.config.ban_warning_threshold
 
-                        ban_warning_threshold_high = self.config.get_config('ban_warning_threshold_high',
-                                                                       'explainlikeimfive')
+                        ban_warning_threshold_high = self.config.ban_warning_threshold_high
 
-                        if user_dict['comment_removals'] > comment_warning_threshold:
+                        if user_dict['comment_removals'] >= comment_warning_threshold:
                             response = utils.SlackResponse()
                             response.add_attachment(title="Warning regarding user /u/" + user_dict['username'],
                                                     title_link="https://www.reddit.com/user/" + user_dict['username'],
@@ -209,12 +241,15 @@ class RedditBot:
                                                     str(comment_warning_threshold),
                                                     color='warning', callback_id="userwarning")
                             response.attachments[0].add_button("Verify", value="verify", style='primary')
+                            response.attachments[0].add_button("Track", value="track_" + user_dict['username'])
+                            response.attachments[0].add_button("Shadowban", value="shadowban_" + user_dict['username'],
+                                                               style='danger')
 
-                            response.post_to_channel('#rs_feed')
+                            response.post_to_channel(token=self.config.bot_user_token, channel='#rs_feed')
 
                             done = True
 
-                        if user_dict['comment_removals'] > comment_warning_threshold_high:
+                        if user_dict['comment_removals'] >= comment_warning_threshold_high:
                             response = utils.SlackResponse()
                             response.add_attachment(title="*Urgent warning* regarding user /u/" + user_dict['username'],
                                                     title_link="https://www.reddit.com/user/" + user_dict['username'],
@@ -223,12 +258,15 @@ class RedditBot:
                                                     str(comment_warning_threshold_high),
                                                     color='danger', callback_id="userwarning")
                             response.attachments[0].add_button("Verify", value="verify", style='primary')
+                            response.attachments[0].add_button("Track", value="track_" + user_dict['username'])
+                            response.attachments[0].add_button("Shadowban", value="shadowban_" + user_dict['username'],
+                                                               style='danger')
 
-                            response.post_to_channel('#rs_feed')
+                            response.post_to_channel(token=self.config.bot_user_token, channel='#rs_feed')
 
                             done = True
 
-                        if user_dict['link_removals'] > submission_warning_threshold:
+                        if user_dict['link_removals'] >= submission_warning_threshold:
                             response = utils.SlackResponse()
                             response.add_attachment(title="Warning regarding user /u/" + user_dict['username'],
                                                     title_link="https://www.reddit.com/user/" + user_dict['username'],
@@ -236,12 +274,15 @@ class RedditBot:
                                                          " history." % str(submission_warning_threshold),
                                                     color='warning', callback_id="userwarning")
                             response.attachments[0].add_button("Verify", value="verify", style="primary")
+                            response.attachments[0].add_button("Track", value="track_" + user_dict['username'])
+                            response.attachments[0].add_button("Shadowban", value="shadowban_" + user_dict['username'],
+                                                               style='danger')
 
-                            response.post_to_channel('#rs_feed')
+                            response.post_to_channel(token=self.config.bot_user_token, channel='#rs_feed')
 
                             done = True
 
-                        if user_dict['link_removals'] > submission_warning_threshold_high:
+                        if user_dict['link_removals'] >= submission_warning_threshold_high:
                             response = utils.SlackResponse()
                             response.add_attachment(title="*Urgent warning* regarding user /u/" + user_dict['username'],
                                                     title_link="https://www.reddit.com/user/" + user_dict['username'],
@@ -250,12 +291,15 @@ class RedditBot:
                                                          str(submission_warning_threshold_high),
                                                     color='danger', callback_id="userwarning")
                             response.attachments[0].add_button("Verify", value="verify", style="primary")
+                            response.attachments[0].add_button("Track", value="track_" + user_dict['username'])
+                            response.attachments[0].add_button("Shadowban", value="shadowban_" + user_dict['username'],
+                                                               style='danger')
 
-                            response.post_to_channel('#rs_feed')
+                            response.post_to_channel(token=self.config.bot_user_token, channel='#rs_feed')
 
                             done = True
 
-                        if user_dict['bans'] > ban_warning_threshold:
+                        if user_dict['bans'] >= ban_warning_threshold:
 
                             response = utils.SlackResponse()
                             response.add_attachment(title="Warning regarding user /u/" + user_dict['username'],
@@ -264,12 +308,15 @@ class RedditBot:
                                                     % str(ban_warning_threshold),
                                                     color='warning', callback_id="userwarning")
                             response.attachments[0].add_button("Verify", value="verify", style='primary')
+                            response.attachments[0].add_button("Track", value="track_" + user_dict['username'])
+                            response.attachments[0].add_button("Shadowban", value="shadowban_" + user_dict['username'],
+                                                               style='danger')
 
-                            response.post_to_channel('#rs_feed')
+                            response.post_to_channel(token=self.config.bot_user_token, channel='#rs_feed')
 
                             done = True
 
-                        if user_dict['bans'] > ban_warning_threshold_high:
+                        if user_dict['bans'] >= ban_warning_threshold_high:
 
                             response = utils.SlackResponse()
                             response.add_attachment(title="*Urgent warning* regarding user /u/" + user_dict['username'],
@@ -279,8 +326,11 @@ class RedditBot:
                                                          % str(ban_warning_threshold_high),
                                                     color='danger', callback_id="userwarning")
                             response.attachments[0].add_button("Verify", value="verify", style='primary')
+                            response.attachments[0].add_button("Track", value="track_" + user_dict['username'])
+                            response.attachments[0].add_button("Shadowban", value="shadowban_" + user_dict['username'],
+                                                               style='danger')
 
-                            response.post_to_channel('#rs_feed')
+                            response.post_to_channel(token=self.config.bot_user_token, channel='#rs_feed')
 
                             done = True
 
@@ -298,7 +348,7 @@ class RedditBot:
 
         while True:
             self.r._use_oauth = False
-            modmail = self.r.get_mod_mail('santi871', limit=100)
+            modmail = self.r.get_mod_mail('santi871', limit=10)
 
             muted_users = [track[1] for track in self.db.fetch_tracks("permamuted")]
 
@@ -331,29 +381,29 @@ class RedditBot:
 
     @bot_threading.own_thread
     def handle_unflaired(self):
+        print("Starting handle_unflaired thread...")
 
         r = self.r
-        submission_ids = self.fetch_already_done("unflaired_submissions.txt")
-        unflaired_submissions = utils.get_unflaired_submissions(r, submission_ids)
-        tracked_users = [track[1] for track in self.db.fetch_tracks("tracked")]
+        unflaired_submissions = self.db.fetch_unflaired_submissions(r)
+        tracked_users = [track[1].lower() for track in self.db.fetch_tracks("tracked")]
 
         while True:
 
             highest_timestamp = datetime.datetime.now() - datetime.timedelta(minutes=10)
             try:
                 self.r._use_oauth = False
-                submissions = r.get_subreddit('explainlikeimfive').get_new(limit=50)
+                submissions = r.get_subreddit(self.subreddit_name).get_new(limit=20)
 
                 for submission in submissions:
 
-                    if submission.author.name in tracked_users and submission.id not in self.already_done:
+                    if submission.author.name.lower() in tracked_users and submission.id not in self.already_done:
                         response = utils.SlackResponse(text="New submission by user /u/" + submission.author.name)
 
                         self.r._use_oauth = False
                         response.add_attachment(title=submission.title, title_link=submission.permalink,
                                                 text=submission.body, color="#warning")
 
-                        response.post_to_channel('#rs_feed')
+                        response.post_to_channel(token=self.config.bot_user_token, channel='#rs_feed')
                         self.already_done.append(submission.id)
 
                         with open("already_done.txt", "a") as text_file:
@@ -364,7 +414,7 @@ class RedditBot:
                         submission.remove()
 
                         s1 = submission.author
-                        s2 = 'https://www.reddit.com/message/compose/?to=/r/explainlikeimfive'
+                        s2 = 'https://www.reddit.com/message/compose/?to=/r/' + self.subreddit_name
                         s3 = submission.permalink
 
                         comment = utils.generate_flair_comment(s1, s2, s3)
@@ -376,33 +426,35 @@ class RedditBot:
 
                         unflaired_submissions.append(unflaired_submission)
 
-                        with open("unflaired_submissions.txt", "a") as text_file:
-                            print(submission.id + ",", end="", file=text_file)
+                        self.db.log_unflaired_submission(submission.id, comment_obj.id)
 
-                for submission_object in unflaired_submissions:
+                for unflaired_submission_obj in unflaired_submissions:
 
-                    refreshed_submission = r.get_submission(submission_id=submission_object.submission.id)
+                    submission = unflaired_submission_obj.submission
+                    r._use_oauth = False
+                    submission = r.get_submission(submission_id=submission.id)
+                    comment = unflaired_submission_obj.comment
 
-                    if refreshed_submission.link_flair_text is not None:
-                        refreshed_submission.approve()
+                    if submission.link_flair_text is not None:
+                        submission.approve()
 
-                        for report in refreshed_submission.mod_reports:
-                            refreshed_submission.report(report[0])
+                        for report in submission.mod_reports:
+                            submission.report(report[0])
                             print(str(report))
 
-                        submission_object.comment.delete()
-                        unflaired_submissions.remove(submission_object)
-                        self.remove_from_file("unflaired_submissions.txt", submission_object.submission.id)
-
+                        comment.delete()
+                        unflaired_submissions.remove(unflaired_submission_obj)
+                        self.db.delete_unflaired_submissions_row(submission.id)
                     else:
 
-                        submission_time = datetime.datetime.fromtimestamp(refreshed_submission.created_utc)
+                        submission_time = datetime.datetime.fromtimestamp(submission.created)
                         d = datetime.datetime.now() - submission_time
                         delta_time = d.total_seconds()
 
-                        if delta_time >= 10800:
-                            unflaired_submissions.remove(submission_object)
-                            submission_object.comment.delete()
+                        if delta_time >= 13600:
+                            unflaired_submissions.remove(unflaired_submission_obj)
+                            comment.delete()
+                            self.db.delete_unflaired_submissions_row(submission.id)
 
             except (requests.exceptions.HTTPError, praw.errors.HTTPException):
                 sleep(2)
@@ -429,14 +481,17 @@ class RedditBot:
         else:
             no_summary = False
 
-        user_status = self.db.fetch_user_log(username)
-
         try:
             user = self.r.get_redditor(username, fetch=True)
         except praw.errors.NotFound:
             response = utils.SlackResponse()
             response.add_attachment(fallback="Summary error.", title="Error: user not found.", color='danger')
             return request.delayed_response(response)
+
+        username = user.name
+        user_status = self.db.fetch_user_log(username)
+        troll_likelihood = "Low"
+        color = 'good'
 
         comment_removals = user_status[0]
         link_removals = user_status[1]
@@ -446,6 +501,7 @@ class RedditBot:
         user_is_shadowbanned = user_status[5]
         combined_karma = user.link_karma + user.comment_karma
         account_creation = str(datetime.datetime.fromtimestamp(user.created_utc))
+        self.r._use_oauth = False
         last_note = self.get_last_note(username)
 
         response = utils.SlackResponse(replace_original=replace_original)
@@ -475,7 +531,7 @@ class RedditBot:
         else:
             response.attachments[0].add_button("Track", "track_" + username)
 
-        if self.config.get_config(section='explainlikeimfive', name="shadowbans_enabled", var_type='bool'):
+        if self.config.shadowbans_enabled:
             if user_is_shadowbanned == "Yes":
                 response.attachments[0].add_button("Unshadowban", "unshadowban_" + username, style='danger')
             else:
@@ -485,9 +541,6 @@ class RedditBot:
                                                    yes="Shadowban")
 
         if not no_summary:
-
-            troll_likelihood = "Low"
-            color = 'good'
             limit = 500
             i = 0
             total_comments = 0
@@ -657,14 +710,23 @@ class RedditBot:
         if request is not None:
             response = request.delayed_response(response)
 
-        print(response)
+    @bot_threading.own_thread
+    def shadowban(self, kwargs):
 
-    def shadowban(self, username, author):
-
-        """*!shadowban [user] [reason]:* Shadowbans [user] and adds usernote [reason] - USERNAME IS CASE SENSITIVE!"""
+        username = kwargs['username']
+        request = kwargs['request']
+        author = kwargs['author']
 
         r = self.r
-        response = utils.SlackResponse(text='Usage: !shadowban [username] [reason]')
+
+        try:
+            user = self.r.get_redditor(username, fetch=True)
+        except praw.errors.NotFound:
+            response = utils.SlackResponse()
+            response.add_attachment(fallback="Shadowban error.", title="Error: user not found.", color='danger')
+            return request.delayed_response(response)
+
+        username = user.name
 
         if author in self.usergroup_mod:
 
@@ -706,11 +768,24 @@ class RedditBot:
                                         text=traceback.format_exc(),
                                         color='danger')
 
-        return response
+            request.delayed_response(response)
 
-    def unshadowban(self, username, author):
+    @bot_threading.own_thread
+    def unshadowban(self, kwargs):
 
+        username = kwargs['username']
+        request = kwargs['request']
+        author = kwargs['author']
         response = utils.SlackResponse(text="Failed to unshadowban user.")
+
+        try:
+            user = self.r.get_redditor(username, fetch=True)
+        except praw.errors.NotFound:
+            response = utils.SlackResponse()
+            response.add_attachment(fallback="Shadowban error.", title="Error: user not found.", color='danger')
+            return request.delayed_response(response)
+
+        username = user.name
 
         if author in self.usergroup_mod:
             wiki_page = self.r.get_wiki_page(self.subreddit_name, "config/automoderator")
@@ -736,4 +811,4 @@ class RedditBot:
                                         title="Exception",
                                         text=traceback.format_exc(),
                                         color='danger')
-        return response
+        request.delayed_response(response)

@@ -1,6 +1,5 @@
 import json
 import requests
-import praw.helpers
 import configparser
 
 
@@ -15,9 +14,20 @@ SLACK_SLASHCMDS_SECRET = get_token("SLACK_SLASHCMDS_SECRET")
 SLACK_BOT_TOKEN = get_token('SLACK_BOT_TOKEN')
 
 
-def get_config_sections(name='config.ini'):
+def get_sub_name(team_id, filename='config.ini'):
     config = configparser.ConfigParser()
-    config.read(name)
+    config.read(filename)
+
+    for section in config.sections():
+        for key, val in config.items(section):
+            if key == "slackteam_id" and val == team_id:
+                return section
+    return None
+
+
+def get_config_sections(filename='config.ini'):
+    config = configparser.ConfigParser()
+    config.read(filename)
     return config.sections()
 
 
@@ -37,6 +47,12 @@ class RSConfig:
         self.submission_warning_threshold_high = None
         self.ban_warning_threshold_high = None
         self.shadowbans_enabled = None
+        self.monitor_modmail = None
+        self.monitor_submissions = None
+        self.monitor_comments = None
+        self.monitor_modlog = None
+        self.remove_unflaired = None
+        self.bot_user_token = None
 
         self._update()
 
@@ -44,23 +60,22 @@ class RSConfig:
 
         self.slackteam_id = self.config.get(self.subreddit, "slackteam_id")
         self.mode = self.config.get(self.subreddit, "mode")
-        self.comment_warning_threshold = self.config.get(self.subreddit, "comment_warning_threshold")
-        self.comment_warning_threshold_high = self.config.get(self.subreddit, "comment_warning_threshold_high")
-        self.submission_warning_threshold = self.config.get(self.subreddit, "submission_warning_threshold")
-        self.submission_warning_threshold_high = self.config.get(self.subreddit, "submission_warning_threshold_high")
-        self.ban_warning_threshold = self.config.get(self.subreddit, "ban_warning_threshold")
-        self.ban_warning_threshold_high = self.config.get(self.subreddit, "ban_warning_threshold_high")
+        self.comment_warning_threshold = self.config.getint(self.subreddit, "comment_warning_threshold")
+        self.comment_warning_threshold_high = self.config.getint(self.subreddit, "comment_warning_threshold_high")
+        self.submission_warning_threshold = self.config.getint(self.subreddit, "submission_warning_threshold")
+        self.submission_warning_threshold_high = self.config.getint(self.subreddit, "submission_warning_threshold_high")
+        self.ban_warning_threshold = self.config.getint(self.subreddit, "ban_warning_threshold")
+        self.ban_warning_threshold_high = self.config.getint(self.subreddit, "ban_warning_threshold_high")
+        self.shadowbans_enabled = self.config.getboolean(self.subreddit, "shadowbans_enabled")
+        self.bot_user_token = self.config.get(self.subreddit, "bot_user_token")
+        self.monitor_modmail = self.config.getboolean(self.subreddit, "monitor_modmail")
+        self.monitor_modlog = self.config.getboolean(self.subreddit, "monitor_modlog")
+        self.monitor_submissions = self.config.getboolean(self.subreddit, "monitor_submissions")
+        self.monitor_comments = self.config.getboolean(self.subreddit, "monitor_comments")
+        self.remove_unflaired = self.config.getboolean(self.subreddit, "remove_unflaired")
 
-    def get_config(self, name, section, var_type=None):
-
-        if var_type is None:
-            return self.config.getint(section, name)
-
-        elif var_type == 'str':
-            return str(self.config.get(section, name))
-
-        elif var_type == "bool":
-            return self.config.getboolean(section, name)
+    def get_config(self, name, section):
+        return self.config.get(section, name)
 
     def set_config(self, name, value):
 
@@ -73,8 +88,6 @@ class RSConfig:
 
         with open(self.filename, 'w') as configfile:
             self.config.write(configfile)
-
-        self._update()
         return True
 
 
@@ -197,12 +210,12 @@ class SlackResponse:
 
         return self.response_dict
 
-    def post_to_channel(self, channel, as_user=False):
+    def post_to_channel(self, token, channel, as_user=False):
 
         response_dict = self.get_dict()
         response_dict['attachments'] = json.dumps(self.response_dict['attachments'])
         response_dict['channel'] = channel
-        response_dict['token'] = SLACK_BOT_TOKEN
+        response_dict['token'] = token
 
         if as_user:
             response_dict['as_user'] = 'true'
@@ -244,6 +257,7 @@ class SlackRequest:
             self.user = self.form['user']['name']
             self.user_id = self.form['user']['id']
             self.team_domain = self.form['team']['domain']
+            self.team_id = self.form['team']['id']
             self.callback_id = self.form['callback_id']
             self.actions = self.form['actions']
             self.message_ts = self.form['message_ts']
@@ -251,6 +265,7 @@ class SlackRequest:
         else:
             self.user = self.form['user_name']
             self.team_domain = self.form['team_domain']
+            self.team_id = self.form['team_id']
             self.command = self.form['command']
             self.text = self.form['text']
             self.channel_name = self.form['channel_name']
@@ -294,29 +309,6 @@ class UnflairedSubmission:
         self.comment = comment
 
 
-def get_unflaired_submissions(r, submission_ids):
-
-    unflaired_submissions = []
-
-    for submission_id in submission_ids:
-        r._use_oauth = False
-        submission = r.get_submission(submission_id=submission_id)
-        submission.replace_more_comments(limit=None, threshold=0)
-        flat_comments = praw.helpers.flatten_tree(submission.comments)
-
-        for comment in flat_comments:
-
-            try:
-                if comment.author.name.lower() == 'eli5_botmod':
-                    unflaired_submission = UnflairedSubmission(submission, comment)
-                    unflaired_submissions.append(unflaired_submission)
-                    break
-            except AttributeError:
-                pass
-
-    return unflaired_submissions
-
-
 def generate_flair_comment(s1, s2, s3):
     comment = ("""Hi /u/%s,
 
@@ -339,9 +331,3 @@ Please [contact the moderators](%s) if you have any questions or concerns*
 """) % (s1, s3, s2)
 
     return comment
-
-
-
-
-
-
