@@ -794,6 +794,8 @@ class RedditBot:
 
                 response.attachments[0].add_field("Author", author)
 
+            except AssertionError:
+                raise
             except:
                 response = utils.SlackResponse(text="Failed to shadowban user.")
                 response.add_attachment(fallback="Shadowban fail",
@@ -842,6 +844,8 @@ class RedditBot:
 
                 response = utils.SlackResponse(text="User */u/%s* has been unshadowbanned." % username)
 
+            except AssertionError:
+                raise
             except:
                 response.add_attachment(fallback="Unhadowban fail",
                                         title="Exception",
