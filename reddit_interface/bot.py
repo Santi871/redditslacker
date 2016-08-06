@@ -55,6 +55,8 @@ class RedditBot:
             if config.remove_unflaired:
                 self.handle_unflaired()
 
+            self.log_bans()
+
     def _authenticate(self):
         o = OAuth2Util.OAuth2Util(self.r)
         o.refresh(force=True)
@@ -137,6 +139,18 @@ class RedditBot:
             comment.report("Slack user @%s has requested a ban." % author)
             response = utils.SlackResponse(text="Ban requested.")
             request.delayed_response(response)
+
+    @bot_threading.own_thread
+    def log_bans(self):
+
+        while True:
+            self.r._use_oauth = False
+            bans = self.r.get_subreddit(self.subreddit_name).get_banned(limit=None)
+
+            for ban in bans:
+                    self.db.log_ban(ban)
+
+            sleep(600)
 
     @bot_threading.own_thread
     def comments_feed(self):

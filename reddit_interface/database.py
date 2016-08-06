@@ -1,5 +1,6 @@
 import sqlite3
 import reddit_interface.utils as utils
+import datetime
 
 
 class RedditSlackerDatabase:
@@ -36,6 +37,13 @@ class RedditSlackerDatabase:
                 (ID INTEGER PRIMARY KEY AUTOINCREMENT,
                 SUBMISSION_ID TEXT NOT NULL,
                 COMMENT_ID TEXT NOT NULL)''')
+
+            self.db.execute('''CREATE TABLE IF NOT EXISTS BANS_LOG
+                (ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                NAME TEXT NOT NULL,
+                USER_ID TEXT NOT NULL UNIQUE,
+                NOTE TEXT NOT NULL,
+                DATETIME TEXT NOT NULL)''')
 
             self.db.execute('''CREATE TABLE IF NOT EXISTS USER_TRACKS
                             (ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -82,6 +90,17 @@ class RedditSlackerDatabase:
                                                                                     team_name,
                                                                                     team_id, channel_name,
                                                                                     channel_id, button_pressed))
+
+    def log_ban(self, ban):
+        cur = self.db.cursor()
+
+        date_time = datetime.datetime.fromtimestamp(ban.date)
+
+        try:
+            cur.execute('''INSERT INTO BANS_LOG(NAME, USER_ID, NOTE, DATE_TIME) VALUES (?,?,?,?)''', (ban.name, ban.id,
+                                                                                                  ban.note, date_time))
+        except Exception as e:
+            print(e)
 
     def handle_mod_log(self, log):
 
