@@ -116,7 +116,7 @@ class RedditSlackerDatabase:
         if ban is None:
             return None
         else:
-            return ban[3]
+            return ban[3], ban[4]
 
     def handle_mod_log(self, log):
 

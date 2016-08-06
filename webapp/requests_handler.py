@@ -87,14 +87,17 @@ class RequestsHandler:
         elif request.command == "/inspectban":
 
             if len(args) == 1:
-                ban_note = self.bots[sub].db.get_ban_note(args[0])
+                ban_note, ban_date = self.bots[sub].db.get_ban_note(args[0])
 
                 if ban_note is not None and ban_note != "":
-                    response = utils.SlackResponse(text="Ban note:")
-                    response.add_attachment(text=ban_note, color='good')
+                    response = utils.SlackResponse(text="Found a ban:")
+                    response.add_attachment(color='good')
+                    response.attachments[0].add_field("Note", ban_note)
+                    response.attachments[0].add_field("Issued", ban_date)
                 elif ban_note == "":
                     response = utils.SlackResponse()
-                    response.add_attachment(text="Error: found ban, but it has no note.", color='danger')
+                    response.add_attachment(text="Error: found ban issued on *%s*, but it has no note." % ban_date,
+                                            color='danger')
                 else:
                     response = utils.SlackResponse()
                     response.add_attachment(text="Error: could not find ban in database.", color='danger')
