@@ -1,6 +1,7 @@
 import sqlite3
 import reddit_interface.utils as utils
 import datetime
+import traceback
 
 
 class RedditSlackerDatabase:
@@ -101,8 +102,8 @@ class RedditSlackerDatabase:
                                                                                                       ban['id'],
                                                                                                   ban['note'],
                                                                                                       date_time))
-        except Exception as e:
-            print(e)
+        except:
+            print(traceback.format_exc())
 
     def handle_mod_log(self, log):
 
