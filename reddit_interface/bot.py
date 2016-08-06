@@ -146,6 +146,7 @@ class RedditBot:
         limit = None
 
         while True:
+            self.r._use_oauth = False
             bans = self.r.get_subreddit(self.subreddit_name).get_banned(limit=limit, user_only=False)
 
             self.r._use_oauth = False
