@@ -213,7 +213,8 @@ class RedditBot:
             already_done_user = []
 
             for item in modlog:
-                if item.id not in self.already_done and item.target_author not in ignored_users:
+                if item.id not in self.already_done and item.target_fullname not in self.already_done and \
+                        item.target_author not in ignored_users:
                     user_dict = self.db.handle_mod_log(item)
 
                     if item.target_author not in already_done_user and user_dict is not None:
@@ -338,9 +339,11 @@ class RedditBot:
                             already_done_user.append(user_dict['username'])
 
                     self.already_done.append(item.id)
+                    self.already_done.append(item.target_fullname)
 
                     with open("already_done.txt", "a") as text_file:
                         print(item.id + ",", end="", file=text_file)
+                        print(item.target_fullname + ',', end="", file=text_file)
             sleep(300)
 
     @bot_threading.own_thread
