@@ -144,7 +144,7 @@ class RedditBot:
 
                 if comment.id not in self.already_done:
                     if comment.is_root and comment.author.name != "ELI5_BotMod"\
-                            and comment.author.name != 'AutoModerator':
+                            and comment.author.name != 'AutoModerator' and comment.banned_by is None:
 
                         response = utils.SlackResponse()
 
