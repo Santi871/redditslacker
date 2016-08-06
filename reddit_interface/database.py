@@ -98,7 +98,7 @@ class RedditSlackerDatabase:
         date_time = datetime.datetime.fromtimestamp(ban['date'])
 
         try:
-            cur.execute('''INSERT INTO BANS_LOG(NAME, USER_ID, NOTE, DATE_TIME) VALUES (?,?,?,?)''', (ban['name'],
+            cur.execute('''INSERT INTO BANS_LOG(NAME, USER_ID, NOTE, DATE_TIME) VALUES (?,?,?,?)''', (ban['name'].name,
                                                                                                       ban['id'],
                                                                                                   ban['note'],
                                                                                                       date_time))
