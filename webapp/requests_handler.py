@@ -92,7 +92,7 @@ class RequestsHandler:
                 if ban_note is not None and ban_note != "":
                     response = utils.SlackResponse(text="Found a ban:")
                     response.add_attachment(color='good')
-                    response.attachments[0].add_field("Note", ban_note)
+                    response.attachments[0].add_field("Note", ban_note, short=False)
                     response.attachments[0].add_field("Issued", ban_date)
                 elif ban_note == "":
                     response = utils.SlackResponse()
