@@ -77,7 +77,7 @@ class RedditBot:
             with open(filename, "a+"):
                 pass
 
-        with open(filename, 'w') as text_file:
+        with open(filename, 'w+') as text_file:
             text_file.write(','.join(already_done))
 
         with open(filename, "r") as text_file:
