@@ -102,6 +102,8 @@ class RedditSlackerDatabase:
                                                                                                       ban['id'],
                                                                                                   ban['note'],
                                                                                                       date_time))
+        except sqlite3.IntegrityError:
+            pass
         except:
             print(traceback.format_exc())
 
