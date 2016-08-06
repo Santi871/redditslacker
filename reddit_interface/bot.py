@@ -823,7 +823,7 @@ class RedditBot:
         username = user.name
 
         if author in self.usergroup_mod:
-            self.r._use_oauth= False
+            self.r._use_oauth = False
             wiki_page = self.r.get_wiki_page(self.subreddit_name, "config/automoderator")
             wiki_page_content = wiki_page.content_md
 
@@ -840,7 +840,7 @@ class RedditBot:
                                                  % (username, author))
 
                     self.r._use_oauth = False
-                    self.un.add_note(n)
+                    # self.un.add_note(n)
 
                 response = utils.SlackResponse(text="User */u/%s* has been unshadowbanned." % username)
 
