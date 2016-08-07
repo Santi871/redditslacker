@@ -9,7 +9,16 @@ from time import sleep
 
 class RequestsHandler:
 
+    """Takes SlackRequest objects and processes them, returning a SlackResponse object
+       Also carries out the command/button action itself, and establishes a link to Reddit via RedditBot objects and
+       their respective RSConfig objects, with each pair bound to its corresponding Slack Team"""
+
     def __init__(self):
+
+        """Create all the RedditBot and RSConfig objects needed (1 pair per Slack team) and store them in dicts
+           Also creates and stores the required databases (also 1 per Slack team)"""
+
+        # The sections of the config.ini file correspond to the subreddits in which RS is active
         sections = utils.get_config_sections()
         self.configs = dict()
         self.databases = dict()
@@ -35,6 +44,9 @@ class RequestsHandler:
                " information on moderator permissions: https://santi871.github.io/redditslacker"
 
     def command_response(self, request, form):
+
+        """Takes a command SlackRequest from Slack and processes it, returning a SlackResponse object"""
+
         response = utils.SlackResponse(text="Processing your request... please allow a few seconds.")
         sub = utils.get_sub_name(request.team_id)
         self.databases[sub].log_command(form)
@@ -152,6 +164,8 @@ class RequestsHandler:
         return response
 
     def button_response(self, request):
+
+        """Takes a button SlackRequest from Slack and processes it, returning a SlackResponse object"""
 
         response = utils.SlackResponse(text="Processing your request... please allow a few seconds.")
         sub = utils.get_sub_name(request.team_id)

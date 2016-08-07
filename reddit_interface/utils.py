@@ -33,6 +33,8 @@ def get_config_sections(filename='config.ini'):
 
 class RSConfig:
 
+    """Associates a section of the config.ini file with a Slack team and parses the config parameters contained there"""
+
     def __init__(self, subreddit, filename='config.ini'):
         self.filename = filename
         self.config = configparser.ConfigParser()
@@ -176,6 +178,8 @@ class SlackAttachment:
 
 class SlackResponse:
 
+    """Class used for easy crafting of a Slack response"""
+
     def __init__(self, text=None, response_type="in_channel", replace_original=True):
         self.response_dict = dict()
         self.attachments = []
@@ -208,18 +212,27 @@ class SlackResponse:
         self._is_prepared = True
 
     def get_json(self):
+
+        """Returns the JSON form of the response, ready to be sent to Slack via POST data"""
+
         if not self._is_prepared:
             self._prepare()
 
         return json.dumps(self.response_dict)
 
     def get_dict(self):
+
+        """Returns the dict form of the response, can be sent to Slack in GET or POST params"""
+
         if not self._is_prepared:
             self._prepare()
 
         return self.response_dict
 
     def post_to_channel(self, token, channel, as_user=False):
+
+        """Posts the SlackResponse object to a specific channel. The Slack team it's posted to depends on the
+        token that is passed. Passing as_user will make RS post the response as the user who authorized the app."""
 
         response_dict = self.get_dict()
         response_dict['attachments'] = json.dumps(self.response_dict['attachments'])
@@ -249,6 +262,8 @@ class SlackResponse:
 
 
 class SlackRequest:
+
+    """Parses HTTP request from Slack"""
 
     def __init__(self, request):
 
@@ -286,6 +301,10 @@ class SlackRequest:
             self.is_valid = True
 
     def delayed_response(self, response):
+
+        """Slack demands a response within 3 seconds. Additional responses can be sent through this method, in the
+        form of a SlackRequest object or plain text string"""
+
         headers = {"content-type": "plain/text"}
 
         if isinstance(response, SlackResponse):
