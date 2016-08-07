@@ -860,8 +860,15 @@ class RedditBot:
         author = kwargs['author']
         request = kwargs['request']
 
-        n = puni.Note(user, note + " | Note added by RedditSlacker, executed by user '%s'" % author,
-                      user, '', 'abusewarn')
+        try:
+            user = self.r.get_redditor(user)
+        except praw.errors.NotFound:
+            response = utils.SlackResponse()
+            response.add_attachment(fallback="Shadowban error.", title="Error: user not found.", color='danger')
+            return request.delayed_response(response)
+
+        n = puni.Note(user.name, note + " | Note added by RedditSlacker, executed by user '%s'" % author,
+                      user.name, '', 'abusewarn')
 
         self.r._use_oauth = False
         self.un.add_note(n)
