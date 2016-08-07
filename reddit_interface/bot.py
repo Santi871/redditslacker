@@ -861,6 +861,7 @@ class RedditBot:
         request = kwargs['request']
 
         try:
+            self.r._use_oauth = False
             user = self.r.get_redditor(user)
         except praw.errors.NotFound:
             response = utils.SlackResponse()
