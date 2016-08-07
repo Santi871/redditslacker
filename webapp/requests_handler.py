@@ -84,6 +84,15 @@ class RequestsHandler:
             else:
                 response = utils.SlackResponse(text="Usage: /track [user]")
 
+        elif request.command == '/addnote':
+
+            if len(args) == 2:
+                user = args[0]
+                note = args[1]
+                self.bots[sub].add_usernote(user=user, note=note, request=request, author=author)
+            else:
+                response = utils.SlackResponse(text="Usage: /addnote [username] [note]")
+
         elif request.command == "/inspectban":
 
             if len(args) == 1:

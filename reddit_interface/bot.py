@@ -852,3 +852,21 @@ class RedditBot:
                                         text=traceback.format_exc(),
                                         color='danger')
         request.delayed_response(response)
+
+    @bot_threading.own_thread
+    def add_usernote(self, kwargs):
+        user = kwargs['user']
+        note = kwargs['note']
+        author = kwargs['author']
+        request = kwargs['request']
+
+        n = puni.Note(user, note + " | Note added by RedditSlacker, executed by user '%s'" % author,
+                      user, '', 'abusewarn')
+
+        self.r._use_oauth = False
+        self.un.add_note(n)
+
+        response = utils.SlackResponse()
+        response.add_attachment(text="Note added successfully!", color='good')
+        request.delayed_response(response)
+
