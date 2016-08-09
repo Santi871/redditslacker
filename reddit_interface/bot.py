@@ -371,7 +371,11 @@ class RedditBot:
 
                     with open("already_done.txt", "a") as text_file:
                         print(item.id + ",", end="", file=text_file)
-                        print(item.target_fullname + ',', end="", file=text_file)
+
+                        try:
+                            print(item.target_fullname + ',', end="", file=text_file)
+                        except TypeError:
+                            pass
             sleep(300)
 
     @bot_threading.own_thread
