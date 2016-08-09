@@ -36,7 +36,7 @@ class CreateThread(threading.Thread):
                 print("*Unhandled exception"
                       " in thread* '%s'." % self.name)
                 print(traceback.format_exc())
-                sleep(60)
+                sleep(10)
 
 
 def own_thread(func):

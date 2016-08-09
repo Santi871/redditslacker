@@ -33,13 +33,14 @@ def get_config_sections(filename='config.ini'):
 
 class RSConfig:
 
+    """Associates a section of the config.ini file with a Slack team and parses the config parameters contained there"""
+
     def __init__(self, subreddit, filename='config.ini'):
         self.filename = filename
         self.config = configparser.ConfigParser()
         self.config.read(filename)
         self.subreddit = subreddit
         self.slackteam_id = None
-        self.mode = None
         self.comment_warning_threshold = None
         self.submission_warning_threshold = None
         self.ban_warning_threshold = None
@@ -53,13 +54,13 @@ class RSConfig:
         self.monitor_modlog = None
         self.remove_unflaired = None
         self.bot_user_token = None
+        self.banlist_populated = None
 
         self._update()
 
     def _update(self):
 
         self.slackteam_id = self.config.get(self.subreddit, "slackteam_id")
-        self.mode = self.config.get(self.subreddit, "mode")
         self.comment_warning_threshold = self.config.getint(self.subreddit, "comment_warning_threshold")
         self.comment_warning_threshold_high = self.config.getint(self.subreddit, "comment_warning_threshold_high")
         self.submission_warning_threshold = self.config.getint(self.subreddit, "submission_warning_threshold")
@@ -73,14 +74,15 @@ class RSConfig:
         self.monitor_submissions = self.config.getboolean(self.subreddit, "monitor_submissions")
         self.monitor_comments = self.config.getboolean(self.subreddit, "monitor_comments")
         self.remove_unflaired = self.config.getboolean(self.subreddit, "remove_unflaired")
+        self.banlist_populated = self.config.getboolean(self.subreddit, "banlist_populated")
 
-    def get_config(self, name, section):
-        return self.config.get(section, name)
+    def get_config(self, name):
+        return self.config.get(self.subreddit, name)
 
     def set_config(self, name, value):
 
         try:
-            self.get_config(name, self.subreddit)
+            self.get_config(name)
         except configparser.NoOptionError:
             return False
 
@@ -89,6 +91,15 @@ class RSConfig:
         with open(self.filename, 'w') as configfile:
             self.config.write(configfile)
         return True
+
+    def list_config(self):
+        config_str = ""
+
+        for key, val in self.config.items(self.subreddit):
+            if key != "bot_user_token":
+                config_str += key + " = " + val + "\n"
+
+        return config_str
 
 
 class SlackButton:
@@ -167,6 +178,8 @@ class SlackAttachment:
 
 class SlackResponse:
 
+    """Class used for easy crafting of a Slack response"""
+
     def __init__(self, text=None, response_type="in_channel", replace_original=True):
         self.response_dict = dict()
         self.attachments = []
@@ -199,18 +212,27 @@ class SlackResponse:
         self._is_prepared = True
 
     def get_json(self):
+
+        """Returns the JSON form of the response, ready to be sent to Slack via POST data"""
+
         if not self._is_prepared:
             self._prepare()
 
         return json.dumps(self.response_dict)
 
     def get_dict(self):
+
+        """Returns the dict form of the response, can be sent to Slack in GET or POST params"""
+
         if not self._is_prepared:
             self._prepare()
 
         return self.response_dict
 
     def post_to_channel(self, token, channel, as_user=False):
+
+        """Posts the SlackResponse object to a specific channel. The Slack team it's posted to depends on the
+        token that is passed. Passing as_user will make RS post the response as the user who authorized the app."""
 
         response_dict = self.get_dict()
         response_dict['attachments'] = json.dumps(self.response_dict['attachments'])
@@ -240,6 +262,8 @@ class SlackResponse:
 
 
 class SlackRequest:
+
+    """Parses HTTP request from Slack"""
 
     def __init__(self, request):
 
@@ -277,6 +301,10 @@ class SlackRequest:
             self.is_valid = True
 
     def delayed_response(self, response):
+
+        """Slack demands a response within 3 seconds. Additional responses can be sent through this method, in the
+        form of a SlackRequest object or plain text string"""
+
         headers = {"content-type": "plain/text"}
 
         if isinstance(response, SlackResponse):

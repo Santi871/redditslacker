@@ -1,5 +1,7 @@
 import sqlite3
 import reddit_interface.utils as utils
+import datetime
+import traceback
 
 
 class RedditSlackerDatabase:
@@ -36,6 +38,13 @@ class RedditSlackerDatabase:
                 (ID INTEGER PRIMARY KEY AUTOINCREMENT,
                 SUBMISSION_ID TEXT NOT NULL,
                 COMMENT_ID TEXT NOT NULL)''')
+
+            self.db.execute('''CREATE TABLE IF NOT EXISTS BANS_LOG
+                (ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                NAME TEXT NOT NULL,
+                USER_ID TEXT NOT NULL UNIQUE,
+                NOTE TEXT NOT NULL,
+                DATE_TIME TEXT NOT NULL)''')
 
             self.db.execute('''CREATE TABLE IF NOT EXISTS USER_TRACKS
                             (ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -82,6 +91,32 @@ class RedditSlackerDatabase:
                                                                                     team_name,
                                                                                     team_id, channel_name,
                                                                                     channel_id, button_pressed))
+
+    def log_ban(self, ban):
+        cur = self.db.cursor()
+
+        date_time = datetime.datetime.fromtimestamp(ban['date'])
+
+        try:
+            cur.execute('''INSERT INTO BANS_LOG(NAME, USER_ID, NOTE, DATE_TIME) VALUES (?,?,?,?)''', (ban['name'].name,
+                                                                                                      ban['id'],
+                                                                                                  ban['note'],
+                                                                                                      date_time))
+        except sqlite3.IntegrityError:
+            pass
+        except:
+            print(traceback.format_exc())
+
+    def get_ban_note(self, username):
+        cur = self.db.cursor()
+
+        cur.execute('''SELECT * FROM BANS_LOG WHERE NAME = ? COLLATE NOCASE''', (username,))
+        ban = cur.fetchone()
+
+        if ban is None:
+            return None
+        else:
+            return ban[3], ban[4]
 
     def handle_mod_log(self, log):
 

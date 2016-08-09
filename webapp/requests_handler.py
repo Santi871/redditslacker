@@ -9,7 +9,16 @@ from time import sleep
 
 class RequestsHandler:
 
+    """Takes SlackRequest objects and processes them, returning a SlackResponse object
+       Also carries out the command/button action itself, and establishes a link to Reddit via RedditBot objects and
+       their respective RSConfig objects, with each pair bound to its corresponding Slack Team"""
+
     def __init__(self):
+
+        """Create all the RedditBot and RSConfig objects needed (1 pair per Slack team) and store them in dicts
+           Also creates and stores the required databases (also 1 per Slack team)"""
+
+        # The sections of the config.ini file correspond to the subreddits in which RS is active
         sections = utils.get_config_sections()
         self.configs = dict()
         self.databases = dict()
@@ -22,7 +31,22 @@ class RequestsHandler:
             self.bots[sub] = bot.RedditBot(self.databases[sub], self.configs[sub])
             sleep(5)
 
+        self.temp_team_id = None
+        self.temp_bot_token = None
+
+    def handle_new_subreddit(self, oauth_response):
+        self.temp_team_id = oauth_response.get('team_id')
+        self.temp_bot_token = oauth_response.get('bot').get('bot_access_token')
+
+        return "Hello! To begin, please enter `/rsconfig subreddit [your-subreddit-name]` to bind your Slack " \
+               "team to your subreddit.\nHave in mind that /u/RedditSlacker should be a moderator of the subreddit," \
+               "with its permissions set according to your desired usage of RedditSlacker. View the documentation for" \
+               " information on moderator permissions: https://santi871.github.io/redditslacker"
+
     def command_response(self, request, form):
+
+        """Takes a command SlackRequest from Slack and processes it, returning a SlackResponse object"""
+
         response = utils.SlackResponse(text="Processing your request... please allow a few seconds.")
         sub = utils.get_sub_name(request.team_id)
         self.databases[sub].log_command(form)
@@ -63,6 +87,45 @@ class RequestsHandler:
             else:
                 response = utils.SlackResponse(text="Usage: /requestban [comment_id]")
 
+        elif request.command == "/track":
+
+            if len(args) == 1:
+                user = args[0]
+                self.bots[sub].db.update_user_status(user, "track")
+                response = utils.SlackResponse(text="Tracking user.")
+            else:
+                response = utils.SlackResponse(text="Usage: /track [user]")
+
+        elif request.command == '/addnote':
+
+            if len(args) >= 2:
+                user = args[0]
+                note = ' '.join(args[1:])
+                self.bots[sub].add_usernote(user=user, note=note, request=request, author=author)
+            else:
+                response = utils.SlackResponse(text="Usage: /addnote [username] [note]")
+
+        elif request.command == "/inspectban":
+
+            if len(args) == 1:
+                ban_note, ban_date = self.bots[sub].db.get_ban_note(args[0])
+
+                if ban_note is not None and ban_note != "":
+                    response = utils.SlackResponse(text="Found a ban:")
+                    response.add_attachment(color='good')
+                    response.attachments[0].add_field("Note", ban_note, short=False)
+                    response.attachments[0].add_field("Issued", ban_date)
+                elif ban_note == "":
+                    response = utils.SlackResponse()
+                    response.add_attachment(text="Error: found ban issued on *%s*, but it has no note." % ban_date,
+                                            color='danger')
+                else:
+                    response = utils.SlackResponse()
+                    response.add_attachment(text="Error: could not find ban in database.", color='danger')
+
+            else:
+                response = utils.SlackResponse(text="Usage: /inspectban [username]")
+
         elif request.command == '/rsconfig':
 
             if len(args) > 1:
@@ -88,6 +151,11 @@ class RequestsHandler:
                     response.post_to_channel(token=self.configs[sub].bot_user_token, channel=request.channel_name)
 
                     os.execl(sys.executable, sys.executable, *sys.argv)
+                elif args[0] == "list":
+                    config_str = self.configs[sub].list_config()
+                    response = utils.SlackResponse(text="Showing configuration for RedditSlacker")
+                    response.add_attachment(text=config_str, color='good')
+
                 else:
                     response = utils.SlackResponse()
                     response.add_attachment(text="Error: invalid parameter, or insufficient permissions.",
@@ -96,6 +164,8 @@ class RequestsHandler:
         return response
 
     def button_response(self, request):
+
+        """Takes a button SlackRequest from Slack and processes it, returning a SlackResponse object"""
 
         response = utils.SlackResponse(text="Processing your request... please allow a few seconds.")
         sub = utils.get_sub_name(request.team_id)
