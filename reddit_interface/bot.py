@@ -212,6 +212,7 @@ class RedditBot:
                             response.add_attachment(title=submission.title,
                                                     title_link=submission.permalink, color='warning')
                             response.post_to_channel(token=self.config.bot_user_token, channel='#rs_feed')
+                            submission.report("Possible soapbox attempt.")
 
                     self.already_done.append(comment.id)
 
