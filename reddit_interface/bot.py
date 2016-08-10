@@ -172,7 +172,11 @@ class RedditBot:
 
                 if comment.id not in self.already_done:
                     self.r._use_oauth = False
-                    submission = comment.submission
+
+                    try:
+                        submission = comment.submission
+                    except AttributeError:
+                        submission = None
 
                     if comment.is_root and comment.author.name != "ELI5_BotMod"\
                             and comment.author.name != 'AutoModerator' and comment.banned_by is None:
