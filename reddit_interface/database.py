@@ -347,10 +347,12 @@ class RedditSlackerDatabase:
 
         if row is not None:
             response_count = row[2] + 1
-            cur.execute('''REPLACE INTO OP_RESPONSES VALUES (?,?,?)''', (row[0], row[1], response_count))
+            cur.execute('''REPLACE INTO OP_RESPONSES(ID, SUBMISSION_ID, RESPONSE_COUNT) VALUES (?,?,?)''',
+                        (row[0], row[1], response_count))
         else:
             response_count = 1
-            cur.execute('''INSERT INTO OP_RESPONSES VALUES (?,?)''', (submission_id, response_count))
+            cur.execute('''INSERT INTO OP_RESPONSES(SUBMISSION_ID, RESPONSE_COUNT) VALUES (?,?)''',
+                        (submission_id, response_count))
 
         if response_count > 3:
             return True
