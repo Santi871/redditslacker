@@ -359,3 +359,28 @@ Please [contact the moderators](%s) if you have any questions or concerns*
 """) % (s1, s3, s2)
 
     return comment
+
+
+class SlackModmail:
+
+    def __init__(self, root_mail):
+
+        self.root_mail = root_mail
+        self.root_mail_message = SlackResponse()
+
+        self.root_mail_message.add_attachment(title=root_mail.subject,
+                                              title_link="https://www.reddit.com/message/messages/" + root_mail.id,
+                                              text=root_mail.body)
+
+        self.root_mail_message.attachments[0].add_field(title="Author", value=root_mail.author.name)
+        self.n_replies = 0
+
+    def add_reply(self, reply):
+
+        self.root_mail_message.add_attachment(title=reply.subject, text=reply.body)
+        self.n_replies += 1
+
+        self.root_mail_message.attachments[self.n_replies].add_field(title="Author", value=reply.author.name)
+
+    def post(self, token, channel):
+        self.root_mail_message.post_to_channel(token, channel)

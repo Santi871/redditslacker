@@ -408,16 +408,26 @@ class RedditBot:
             muted_users = [track[1] for track in self.db.fetch_tracks("permamuted")]
 
             self.r._use_oauth = False
-            for item in modmail:
-                if item.id not in self.already_done and item.author.name in muted_users:
+            for message in modmail:
+                if message.id not in self.already_done:
 
-                    if not self.debug:
-                        item.mute_modmail_author()
+                    if message.author.name in muted_users:
 
-                    self.already_done.append(item.id)
+                        if not self.debug:
+                            message.mute_modmail_author()
+
+                    slack_modmail = utils.SlackModmail(message)
+
+                    for reply in modmail.replies:
+                        slack_modmail.add_reply(reply)
+
+                    slack_modmail.post(self.config.bot_user_token, "#modmail")
+
+                    self.already_done.append(message.id)
 
                     with open("already_done.txt", "a") as text_file:
-                        print(item.id + ",", end="", file=text_file)
+                        print(message.id + ",", end="", file=text_file)
+
             sleep(30)
 
     @staticmethod
