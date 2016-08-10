@@ -422,7 +422,7 @@ class RedditBot:
 
                     slack_modmail = utils.SlackModmail(message)
 
-                    for reply in modmail.replies:
+                    for reply in message.replies:
                         slack_modmail.add_reply(reply)
 
                     slack_modmail.post(self.config.bot_user_token, "#modmail")
