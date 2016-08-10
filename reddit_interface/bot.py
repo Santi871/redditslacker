@@ -407,7 +407,7 @@ class RedditBot:
 
         while True:
             self.r._use_oauth = False
-            modmail = self.r.get_mod_mail('santi871', limit=10)
+            modmail = self.r.get_mod_mail(self.subreddit_name, limit=10)
 
             muted_users = [track[1] for track in self.db.fetch_tracks("permamuted")]
 
