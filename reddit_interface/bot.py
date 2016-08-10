@@ -202,17 +202,21 @@ class RedditBot:
                         response.post_to_channel(token=self.config.bot_user_token, channel='#rs_feed')
 
                     self.r._use_oauth = False
-                    if comment.author.name.lower() == submission.author.name.lower()\
-                            and len(comment.body) > 500:
 
-                        warning_trigger = self.db.add_submission_op_reply(submission.id)
+                    try:
+                        if comment.author.name.lower() == submission.author.name.lower()\
+                                and len(comment.body) > 500:
 
-                        if warning_trigger:
-                            response = utils.SlackResponse(text="Detected possible soapboxing attempt.")
-                            response.add_attachment(title=submission.title,
-                                                    title_link=submission.permalink, color='warning')
-                            response.post_to_channel(token=self.config.bot_user_token, channel='#rs_feed')
-                            submission.report("Possible soapbox attempt.")
+                            warning_trigger = self.db.add_submission_op_reply(submission.id)
+
+                            if warning_trigger:
+                                response = utils.SlackResponse(text="Detected possible soapboxing attempt.")
+                                response.add_attachment(title=submission.title,
+                                                        title_link=submission.permalink, color='warning')
+                                response.post_to_channel(token=self.config.bot_user_token, channel='#rs_feed')
+                                submission.report("Possible soapbox attempt.")
+                    except AttributeError:
+                        pass
 
                     self.already_done.append(comment.id)
 
