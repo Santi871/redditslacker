@@ -235,7 +235,12 @@ class SlackResponse:
         token that is passed. Passing as_user will make RS post the response as the user who authorized the app."""
 
         response_dict = self.get_dict()
-        response_dict['attachments'] = json.dumps(self.response_dict['attachments'])
+
+        try:
+            response_dict['attachments'] = json.dumps(self.response_dict['attachments'])
+        except KeyError:
+            pass
+
         response_dict['channel'] = channel
         response_dict['token'] = token
 
