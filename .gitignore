@@ -103,3 +103,6 @@ ENV/
 
 # Rope project settings
 .ropeproject
+/explainlikeimfive.db
+/url.txt
+/alive_check.py

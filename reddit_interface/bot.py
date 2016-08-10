@@ -171,6 +171,9 @@ class RedditBot:
             for comment in comments:
 
                 if comment.id not in self.already_done:
+                    self.r._use_oauth = False
+                    submission = comment.submission
+
                     if comment.is_root and comment.author.name != "ELI5_BotMod"\
                             and comment.author.name != 'AutoModerator' and comment.banned_by is None:
 
@@ -178,7 +181,7 @@ class RedditBot:
 
                         self.r._use_oauth = False
                         response.add_attachment(text=comment.body,
-                                                color="#0073a3", title=comment.submission.title,
+                                                color="#0073a3", title=submission.title,
                                                 title_link=comment.permalink, callback_id="tlcfeed")
                         response.attachments[0].add_field("Author", comment.author.name)
                         response.attachments[0].add_button("Approve", "approve_" + comment.id, style="primary")
@@ -193,10 +196,22 @@ class RedditBot:
                         response = utils.SlackResponse(text="New comment by user /u/" + comment.author.name)
 
                         self.r._use_oauth = False
-                        response.add_attachment(title=comment.submission.title, title_link=comment.permalink,
+                        response.add_attachment(title=submission.title, title_link=comment.permalink,
                                                 text=comment.body, color="#warning")
 
                         response.post_to_channel(token=self.config.bot_user_token, channel='#rs_feed')
+
+                    self.r._use_oauth = False
+                    if comment.author.name.lower() == submission.author.name.lower()\
+                            and len(comment.body) > 500:
+
+                        warning_trigger = self.db.add_submission_op_reply(submission.id)
+
+                        if warning_trigger:
+                            response = utils.SlackResponse(text="Detected possible soapboxing attempt.")
+                            response.add_attachment(title=submission.title,
+                                                    title_link=submission.permalink, color='warning')
+                            response.post_to_channel(token=self.config.bot_user_token, channel='#rs_feed')
 
                     self.already_done.append(comment.id)
 
