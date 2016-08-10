@@ -384,3 +384,6 @@ class SlackModmail:
 
     def post(self, token, channel):
         self.root_mail_message.post_to_channel(token, channel)
+
+        line = SlackResponse(text="-------")
+        line.post_to_channel(token, channel)
