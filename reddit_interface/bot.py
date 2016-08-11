@@ -443,7 +443,7 @@ class RedditBot:
                             try:
                                 modmails[message.id].add_reply(reply)
                             except KeyError:
-                                pass
+                                break
 
             sleep(30)
 
