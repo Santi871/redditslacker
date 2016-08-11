@@ -408,43 +408,47 @@ class RedditBot:
         modmails = dict()
 
         while True:
-            self.r._use_oauth = False
-            modmail = self.r.get_mod_mail(self.subreddit_name, limit=10)
 
-            muted_users = [track[1] for track in self.db.fetch_tracks("permamuted")]
+            try:
+                self.r._use_oauth = False
+                modmail = self.r.get_mod_mail(self.subreddit_name, limit=10)
 
-            self.r._use_oauth = False
-            for message in modmail:
-                if message.id not in self.already_done:
+                muted_users = [track[1] for track in self.db.fetch_tracks("permamuted")]
 
-                    if message.author.name in muted_users:
+                self.r._use_oauth = False
+                for message in modmail:
+                    if message.id not in self.already_done:
 
-                        if not self.debug:
-                            message.mute_modmail_author()
+                        if message.author.name in muted_users:
 
-                    modmails[message.id] = utils.SlackModmail(message, self.config.bot_user_token, "C208X7WR0")
+                            if not self.debug:
+                                message.mute_modmail_author()
 
-                    for reply in message.replies:
-                        modmails[message.id].add_reply(reply)
+                        modmails[message.id] = utils.SlackModmail(message, self.config.bot_user_token, "C208X7WR0")
+
+                        for reply in message.replies:
+                            modmails[message.id].add_reply(reply)
+                            with open("already_done.txt", "a") as text_file:
+                                print(reply.id + ",", end="", file=text_file)
+                            self.already_done.append(reply.id)
+
+                        self.already_done.append(message.id)
+
                         with open("already_done.txt", "a") as text_file:
-                            print(reply.id + ",", end="", file=text_file)
-                        self.already_done.append(reply.id)
+                            print(message.id + ",", end="", file=text_file)
 
-                    self.already_done.append(message.id)
-
-                    with open("already_done.txt", "a") as text_file:
-                        print(message.id + ",", end="", file=text_file)
-
-                else:
-                    for reply in message.replies:
-                        if reply.id not in self.already_done:
-                            try:
-                                modmails[message.id].add_reply(reply)
-                                with open("already_done.txt", "a") as text_file:
-                                    print(reply.id + ",", end="", file=text_file)
-                                self.already_done.append(reply.id)
-                            except KeyError:
-                                break
+                    else:
+                        for reply in message.replies:
+                            if reply.id not in self.already_done:
+                                try:
+                                    modmails[message.id].add_reply(reply)
+                                    with open("already_done.txt", "a") as text_file:
+                                        print(reply.id + ",", end="", file=text_file)
+                                    self.already_done.append(reply.id)
+                                except KeyError:
+                                    break
+            except AttributeError:
+                pass
 
             sleep(5)
 
