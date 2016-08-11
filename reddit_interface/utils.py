@@ -250,7 +250,7 @@ class SlackResponse:
         request_response = requests.post('https://slack.com/api/chat.postMessage',
                                          params=response_dict)
 
-        return json.loads(request_response.json()).get('ts', None)
+        return request_response.json().get('ts', None)
 
     def update_message(self, timestamp, channel, parse='full'):
 
