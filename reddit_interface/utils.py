@@ -368,8 +368,9 @@ Please [contact the moderators](%s) if you have any questions or concerns*
 
 class SlackModmail:
 
-    def __init__(self, root_mail, bot_token):
+    def __init__(self, root_mail, bot_token, channel):
 
+        self.channel = channel
         self.current_color = 'good'
         self.message_timestamp = None
         self.separator_message_ts = None
@@ -383,6 +384,7 @@ class SlackModmail:
 
         self.root_mail_message.attachments[0].add_field(title="Author", value=root_mail.author.name)
         self.n_replies = 0
+        self.post()
 
     def get_current_color(self):
 
@@ -400,14 +402,14 @@ class SlackModmail:
 
         self.root_mail_message.attachments[self.n_replies].add_field(title="Author", value=reply.author.name)
 
-        self.post("#modmail")
+        self.post()
 
-    def post(self, channel):
+    def post(self):
 
         if self.message_timestamp is not None:
             delete_request_params = dict()
             delete_request_params['token'] = self.bot_token
-            delete_request_params['channel'] = channel
+            delete_request_params['channel'] = self.channel
             delete_request_params['ts'] = self.message_timestamp
             slack_response = requests.post("https://slack.com/api/chat.delete", params=delete_request_params)
             print(slack_response.text)
@@ -415,7 +417,7 @@ class SlackModmail:
             slack_response = requests.post("https://slack.com/api/chat.delete", params=delete_request_params)
             print(slack_response.text)
 
-        self.message_timestamp = self.root_mail_message.post_to_channel(self.bot_token, channel)
+        self.message_timestamp = self.root_mail_message.post_to_channel(self.bot_token, self.channel)
 
         line = SlackResponse(text="-------")
-        self.separator_message_ts = line.post_to_channel(self.bot_token, channel)
+        self.separator_message_ts = line.post_to_channel(self.bot_token, self.channel)

@@ -422,15 +422,13 @@ class RedditBot:
                         if not self.debug:
                             message.mute_modmail_author()
 
-                    modmails[message.id] = utils.SlackModmail(message, self.config.bot_user_token)
+                    modmails[message.id] = utils.SlackModmail(message, self.config.bot_user_token, "#modmail")
 
                     for reply in message.replies:
                         modmails[message.id].add_reply(reply)
                         with open("already_done.txt", "a") as text_file:
                             print(reply.id + ",", end="", file=text_file)
                         self.already_done.append(reply.id)
-
-                    modmails[message.id].post("#modmail")
 
                     self.already_done.append(message.id)
 
