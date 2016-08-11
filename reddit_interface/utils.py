@@ -387,7 +387,7 @@ class SlackModmail:
         self.root_mail_message.add_attachment(title=root_mail.subject,
                                               title_link="https://www.reddit.com/message/messages/" + root_mail.id,
                                               text=root_mail.body, color=self.current_color,
-                                              author_name=root_mail.author.name, ts=root_mail.created_utc)
+                                              author_name="/u/" + root_mail.author.name, ts=root_mail.created_utc)
 
         self.n_replies = 0
         self.post()
@@ -404,7 +404,7 @@ class SlackModmail:
     def add_reply(self, reply):
 
         self.root_mail_message.add_attachment(title=reply.subject, text=reply.body, color=self.get_current_color(),
-                                              author_name=reply.author.name, ts=reply.created_utc)
+                                              author_name="/u/" + reply.author.name, ts=reply.created_utc)
         self.n_replies += 1
 
         print(str(self.root_mail_message.attachments))
