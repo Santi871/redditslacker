@@ -437,6 +437,8 @@ class RedditBot:
                     with open("already_done.txt", "a") as text_file:
                         print(message.id + ",", end="", file=text_file)
 
+                    continue
+
                 else:
                     for reply in message.replies:
                         if reply.id not in self.already_done:
