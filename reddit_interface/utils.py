@@ -403,8 +403,8 @@ class SlackModmail:
 
     def add_reply(self, reply):
 
-        self.root_mail_message.add_attachment(title=reply.subject, text=reply.body, color=self.get_current_color(),
-                                              author_name="/u/" + reply.author.name, ts=reply.created_utc)
+        self.root_mail_message.add_attachment(text=reply.body, color=self.get_current_color(),
+                                              footer="/u/" + reply.author.name, ts=reply.created_utc)
         self.n_replies += 1
 
         print(str(self.root_mail_message.attachments))
