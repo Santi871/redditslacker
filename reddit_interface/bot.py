@@ -409,7 +409,7 @@ class RedditBot:
 
         while True:
             self.r._use_oauth = False
-            modmail = reversed(list(self.r.get_mod_mail(self.subreddit_name, limit=5)))
+            modmail = self.r.get_mod_mail(self.subreddit_name, limit=10)
 
             muted_users = [track[1] for track in self.db.fetch_tracks("permamuted")]
 
@@ -446,7 +446,7 @@ class RedditBot:
                             except KeyError:
                                 break
 
-            sleep(1)
+            sleep(5)
 
     @staticmethod
     def remove_from_file(filename, str_to_remove):
