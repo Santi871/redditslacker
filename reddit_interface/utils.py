@@ -206,17 +206,15 @@ class SlackResponse:
         self.attachments.append(attachment)
 
     def _prepare(self):
+        self.response_dict['attachments'] = ()
         for attachment in self.attachments:
             self.response_dict['attachments'].append(attachment.attachment_dict)
-
-        self._is_prepared = True
 
     def get_json(self):
 
         """Returns the JSON form of the response, ready to be sent to Slack via POST data"""
 
-        if not self._is_prepared:
-            self._prepare()
+        self._prepare()
 
         return json.dumps(self.response_dict)
 
@@ -224,8 +222,7 @@ class SlackResponse:
 
         """Returns the dict form of the response, can be sent to Slack in GET or POST params"""
 
-        if not self._is_prepared:
-            self._prepare()
+        self._prepare()
 
         return self.response_dict
 
