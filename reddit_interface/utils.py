@@ -237,8 +237,7 @@ class SlackResponse:
         response_dict = self.get_dict()
 
         try:
-            if isinstance(response_dict['attachments'], list):
-                response_dict['attachments'] = json.dumps(self.response_dict['attachments'])
+            response_dict['attachments'] = json.dumps(self.response_dict['attachments'])
         except KeyError:
             pass
 
@@ -250,6 +249,11 @@ class SlackResponse:
 
         request_response = requests.post('https://slack.com/api/chat.postMessage',
                                          params=response_dict)
+
+        try:
+            response_dict['attachments'] = json.loads(self.response_dict['attachments'])
+        except KeyError:
+            pass
 
         return request_response.json().get('ts', None)
 
