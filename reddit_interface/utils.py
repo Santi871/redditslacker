@@ -250,7 +250,7 @@ class SlackResponse:
         request_response = requests.post('https://slack.com/api/chat.postMessage',
                                          params=response_dict)
 
-        return request_response
+        return json.loads(request_response).get('ts', None)
 
     def update_message(self, timestamp, channel, parse='full'):
 
@@ -368,27 +368,52 @@ Please [contact the moderators](%s) if you have any questions or concerns*
 
 class SlackModmail:
 
-    def __init__(self, root_mail):
+    def __init__(self, root_mail, bot_token):
 
+        self.current_color = 'good'
+        self.message_timestamp = None
+        self.separator_message_ts = None
+        self.bot_token = bot_token
         self.root_mail = root_mail
         self.root_mail_message = SlackResponse()
 
         self.root_mail_message.add_attachment(title=root_mail.subject,
                                               title_link="https://www.reddit.com/message/messages/" + root_mail.id,
-                                              text=root_mail.body, color='good')
+                                              text=root_mail.body, color=self.current_color)
 
         self.root_mail_message.attachments[0].add_field(title="Author", value=root_mail.author.name)
         self.n_replies = 0
 
+    def get_current_color(self):
+
+        if self.current_color == "good":
+            self.current_color = "danger"
+            return "danger"
+        else:
+            self.current_color = "good"
+            return "good"
+
     def add_reply(self, reply):
 
-        self.root_mail_message.add_attachment(title=reply.subject, text=reply.body, color='good')
+        self.root_mail_message.add_attachment(title=reply.subject, text=reply.body, color=self.get_current_color())
         self.n_replies += 1
 
         self.root_mail_message.attachments[self.n_replies].add_field(title="Author", value=reply.author.name)
 
-    def post(self, token, channel):
-        self.root_mail_message.post_to_channel(token, channel)
+        self.post("#modmail")
+
+    def post(self, channel):
+
+        if self.message_timestamp is not None:
+            delete_request_params = dict()
+            delete_request_params['token'] = self.bot_token
+            delete_request_params['channel'] = channel
+            delete_request_params['ts'] = self.message_timestamp
+            requests.post("https://slack.com/api/chat.delete", params=delete_request_params)
+            delete_request_params['ts'] = self.separator_message_ts
+            requests.post("https://slack.com/api/chat.delete", params=delete_request_params)
+
+        self.message_timestamp = self.root_mail_message.post_to_channel(self.bot_token, channel)
 
         line = SlackResponse(text="-------")
-        line.post_to_channel(token, channel)
+        self.separator_message_ts = line.post_to_channel(self.bot_token, channel)

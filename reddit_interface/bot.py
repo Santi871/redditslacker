@@ -405,9 +405,11 @@ class RedditBot:
     @bot_threading.own_thread
     def monitor_modmail(self):
 
+        modmails = dict()
+
         while True:
             self.r._use_oauth = False
-            modmail = self.r.get_mod_mail(self.subreddit_name, limit=10)
+            modmail = self.r.get_mod_mail("santi871", limit=100)
 
             muted_users = [track[1] for track in self.db.fetch_tracks("permamuted")]
 
@@ -420,17 +422,25 @@ class RedditBot:
                         if not self.debug:
                             message.mute_modmail_author()
 
-                    slack_modmail = utils.SlackModmail(message)
+                    modmails[message.id] = utils.SlackModmail(message, self.config.bot_user_token)
 
                     for reply in message.replies:
-                        slack_modmail.add_reply(reply)
+                        modmails[message.id].add_reply(reply)
+                        with open("already_done.txt", "a") as text_file:
+                            print(reply.id + ",", end="", file=text_file)
+                        self.already_done.append(reply.id)
 
-                    slack_modmail.post(self.config.bot_user_token, "#modmail")
+                    modmails[message.id].post("#modmail")
 
                     self.already_done.append(message.id)
 
                     with open("already_done.txt", "a") as text_file:
                         print(message.id + ",", end="", file=text_file)
+
+                else:
+                    for reply in message.replies:
+                        if reply.id not in self.already_done:
+                            modmails[message.id].add_reply(reply)
 
             sleep(30)
 
