@@ -440,10 +440,13 @@ class RedditBot:
                         if reply.id not in self.already_done:
                             try:
                                 modmails[message.id].add_reply(reply)
+                                with open("already_done.txt", "a") as text_file:
+                                    print(reply.id + ",", end="", file=text_file)
+                                self.already_done.append(reply.id)
                             except KeyError:
                                 break
 
-            sleep(30)
+            sleep(10)
 
     @staticmethod
     def remove_from_file(filename, str_to_remove):

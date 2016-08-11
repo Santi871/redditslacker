@@ -375,10 +375,9 @@ class SlackModmail:
         self.channel = channel
         self.current_color = 'good'
         self.message_timestamp = None
-        self.separator_message_ts = None
         self.bot_token = bot_token
         self.root_mail = root_mail
-        self.root_mail_message = SlackResponse()
+        self.root_mail_message = SlackResponse("------------------")
 
         self.root_mail_message.add_attachment(title=root_mail.subject,
                                               title_link="https://www.reddit.com/message/messages/" + root_mail.id,
@@ -415,12 +414,6 @@ class SlackModmail:
             delete_request_params['token'] = self.bot_token
             delete_request_params['channel'] = self.channel
             delete_request_params['ts'] = self.message_timestamp
-            slack_response = requests.post("https://slack.com/api/chat.delete", params=delete_request_params)
-            print(slack_response.text)
-            delete_request_params['ts'] = self.separator_message_ts
-            slack_response = requests.post("https://slack.com/api/chat.delete", params=delete_request_params)
-            print(slack_response.text)
+            requests.post("https://slack.com/api/chat.delete", params=delete_request_params)
 
         self.message_timestamp = self.root_mail_message.post_to_channel(self.bot_token, self.channel)
-        line = SlackResponse(text="-------")
-        self.separator_message_ts = line.post_to_channel(self.bot_token, self.channel)
