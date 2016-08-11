@@ -422,7 +422,7 @@ class RedditBot:
                         if not self.debug:
                             message.mute_modmail_author()
 
-                    modmails[message.id] = utils.SlackModmail(message, self.config.bot_user_token, "#modmail")
+                    modmails[message.id] = utils.SlackModmail(message, self.config.bot_user_token, "C208X7WR0")
 
                     for reply in message.replies:
                         modmails[message.id].add_reply(reply)
