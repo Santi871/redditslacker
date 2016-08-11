@@ -389,6 +389,11 @@ class SlackModmail:
                                               text=root_mail.body, color=self.current_color,
                                               author_name="/u/" + root_mail.author.name, ts=root_mail.created_utc)
 
+        self.root_mail_message.attachments[0].add_button("Summary", "summary", style='primary')
+        self.root_mail_message.attachments[0].add_button("Mark done", "done")
+        self.root_mail_message.attachments[0].add_button("Mark important", "important")
+        self.root_mail_message.attachments[0].add_button("Mute", "mute", style='danger')
+
         self.n_replies = 0
         self.post()
 
