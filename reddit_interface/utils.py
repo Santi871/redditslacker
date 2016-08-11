@@ -409,9 +409,11 @@ class SlackModmail:
             delete_request_params['token'] = self.bot_token
             delete_request_params['channel'] = channel
             delete_request_params['ts'] = self.message_timestamp
-            requests.post("https://slack.com/api/chat.delete", params=delete_request_params)
+            slack_response = requests.post("https://slack.com/api/chat.delete", params=delete_request_params)
+            print(slack_response.text)
             delete_request_params['ts'] = self.separator_message_ts
-            requests.post("https://slack.com/api/chat.delete", params=delete_request_params)
+            slack_response = requests.post("https://slack.com/api/chat.delete", params=delete_request_params)
+            print(slack_response.text)
 
         self.message_timestamp = self.root_mail_message.post_to_channel(self.bot_token, channel)
 
