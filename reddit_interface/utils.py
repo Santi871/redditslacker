@@ -237,7 +237,8 @@ class SlackResponse:
         response_dict = self.get_dict()
 
         try:
-            response_dict['attachments'] = json.dumps(self.response_dict['attachments'])
+            if isinstance(response_dict['attachments'], list):
+                response_dict['attachments'] = json.dumps(self.response_dict['attachments'])
         except KeyError:
             pass
 
@@ -417,7 +418,7 @@ class SlackModmail:
             slack_response = requests.post("https://slack.com/api/chat.delete", params=delete_request_params)
             print(slack_response.text)
 
-        self.message_timestamp = self.root_mail_message.post_to_channel(self.bot_token, self.channel)
 
+        self.message_timestamp = self.root_mail_message.post_to_channel(self.bot_token, self.channel)
         line = SlackResponse(text="-------")
         self.separator_message_ts = line.post_to_channel(self.bot_token, self.channel)
