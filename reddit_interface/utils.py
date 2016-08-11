@@ -206,7 +206,7 @@ class SlackResponse:
         self.attachments.append(attachment)
 
     def _prepare(self):
-        self.response_dict['attachments'] = ()
+        self.response_dict['attachments'] = []
         for attachment in self.attachments:
             self.response_dict['attachments'].append(attachment.attachment_dict)
 
