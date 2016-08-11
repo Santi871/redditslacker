@@ -136,7 +136,7 @@ class SlackField:
 class SlackAttachment:
 
     def __init__(self, title=None, text=None, fallback=None, callback_id=None, color=None, title_link=None,
-                 image_url=None, footer=None):
+                 image_url=None, footer=None, author_name=None, ts=None):
 
         self.attachment_dict = dict()
 
@@ -156,6 +156,10 @@ class SlackAttachment:
             self.attachment_dict['text'] = text
         if footer is not None:
             self.attachment_dict['footer'] = footer
+        if author_name is not None:
+            self.attachment_dict['author_name'] = author_name
+        if ts is not None:
+            self.attachment_dict['ts'] = ts
 
         self.attachment_dict['mrkdwn_in'] = ['title', 'text']
 
@@ -195,13 +199,14 @@ class SlackResponse:
 
     def add_attachment(self, title=None, text=None, fallback=None, callback_id=None, color=None,
                        title_link=None, footer=None,
-                       image_url=None):
+                       image_url=None, author_name=None, ts=None):
 
         if 'attachments' not in self.response_dict:
             self.response_dict['attachments'] = []
 
         attachment = SlackAttachment(title=title, text=text, fallback=fallback, callback_id=callback_id, color=color,
-                                     title_link=title_link, image_url=image_url, footer=footer)
+                                     title_link=title_link, image_url=image_url, footer=footer, author_name=author_name,
+                                     ts=ts)
 
         self.attachments.append(attachment)
 
@@ -381,9 +386,9 @@ class SlackModmail:
 
         self.root_mail_message.add_attachment(title=root_mail.subject,
                                               title_link="https://www.reddit.com/message/messages/" + root_mail.id,
-                                              text=root_mail.body, color=self.current_color)
+                                              text=root_mail.body, color=self.current_color,
+                                              author_name=root_mail.author.name, ts=root_mail.created_utc)
 
-        self.root_mail_message.attachments[0].add_field(title="Author", value=root_mail.author.name)
         self.n_replies = 0
         self.post()
 
@@ -398,10 +403,9 @@ class SlackModmail:
 
     def add_reply(self, reply):
 
-        self.root_mail_message.add_attachment(title=reply.subject, text=reply.body, color=self.get_current_color())
+        self.root_mail_message.add_attachment(title=reply.subject, text=reply.body, color=self.get_current_color(),
+                                              author_name=reply.author.name, ts=reply.created_utc)
         self.n_replies += 1
-
-        self.root_mail_message.attachments[self.n_replies].add_field(title="Author", value=reply.author.name)
 
         print(str(self.root_mail_message.attachments))
 
