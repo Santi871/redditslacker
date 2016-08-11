@@ -407,6 +407,8 @@ class SlackModmail:
 
         self.root_mail_message.attachments[self.n_replies].add_field(title="Author", value=reply.author.name)
 
+        print(str(self.root_mail_message.attachments))
+
         self.post()
 
     def post(self):
@@ -421,7 +423,6 @@ class SlackModmail:
             delete_request_params['ts'] = self.separator_message_ts
             slack_response = requests.post("https://slack.com/api/chat.delete", params=delete_request_params)
             print(slack_response.text)
-
 
         self.message_timestamp = self.root_mail_message.post_to_channel(self.bot_token, self.channel)
         line = SlackResponse(text="-------")
