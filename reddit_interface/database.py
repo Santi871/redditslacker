@@ -39,6 +39,11 @@ class RedditSlackerDatabase:
                 SUBMISSION_ID TEXT NOT NULL,
                 COMMENT_ID TEXT NOT NULL)''')
 
+            self.db.execute('''CREATE TABLE IF NOT EXISTS OP_RESPONSES
+                (ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                SUBMISSION_ID TEXT UNIQUE NOT NULL,
+                RESPONSE_COUNT INTEGER NOT NULL DEFAULT 0)''')
+
             self.db.execute('''CREATE TABLE IF NOT EXISTS BANS_LOG
                 (ID INTEGER PRIMARY KEY AUTOINCREMENT,
                 NAME TEXT NOT NULL,
@@ -333,6 +338,28 @@ class RedditSlackerDatabase:
 
         cur = self.db.cursor()
         cur.execute('''DELETE FROM UNFLAIRED_SUBMISSIONS WHERE SUBMISSION_ID = ?''', (submission_id,))
+
+    def add_submission_op_reply(self, submission_id):
+
+        cur = self.db.cursor()
+        cur.execute('''SELECT * FROM OP_RESPONSES WHERE SUBMISSION_ID = ?''', (submission_id,))
+        row = cur.fetchone()
+
+        if row is not None:
+            response_count = row[2] + 1
+            cur.execute('''REPLACE INTO OP_RESPONSES(ID, SUBMISSION_ID, RESPONSE_COUNT) VALUES (?,?,?)''',
+                        (row[0], row[1], response_count))
+        else:
+            response_count = 1
+            cur.execute('''INSERT INTO OP_RESPONSES(SUBMISSION_ID, RESPONSE_COUNT) VALUES (?,?)''',
+                        (submission_id, response_count))
+
+        if response_count > 3:
+            return True
+        else:
+            return False
+
+
 
 
 

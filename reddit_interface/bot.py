@@ -171,6 +171,13 @@ class RedditBot:
             for comment in comments:
 
                 if comment.id not in self.already_done:
+                    self.r._use_oauth = False
+
+                    try:
+                        submission = comment.submission
+                    except AttributeError:
+                        submission = None
+
                     if comment.is_root and comment.author.name != "ELI5_BotMod"\
                             and comment.author.name != 'AutoModerator' and comment.banned_by is None:
 
@@ -178,7 +185,7 @@ class RedditBot:
 
                         self.r._use_oauth = False
                         response.add_attachment(text=comment.body,
-                                                color="#0073a3", title=comment.submission.title,
+                                                color="#0073a3", title=submission.title,
                                                 title_link=comment.permalink, callback_id="tlcfeed")
                         response.attachments[0].add_field("Author", comment.author.name)
                         response.attachments[0].add_button("Approve", "approve_" + comment.id, style="primary")
@@ -193,10 +200,27 @@ class RedditBot:
                         response = utils.SlackResponse(text="New comment by user /u/" + comment.author.name)
 
                         self.r._use_oauth = False
-                        response.add_attachment(title=comment.submission.title, title_link=comment.permalink,
+                        response.add_attachment(title=submission.title, title_link=comment.permalink,
                                                 text=comment.body, color="#warning")
 
                         response.post_to_channel(token=self.config.bot_user_token, channel='#rs_feed')
+
+                    self.r._use_oauth = False
+
+                    try:
+                        if comment.author.name.lower() == submission.author.name.lower()\
+                                and len(comment.body) > 500:
+
+                            warning_trigger = self.db.add_submission_op_reply(submission.id)
+
+                            if warning_trigger:
+                                response = utils.SlackResponse(text="Detected possible soapboxing attempt.")
+                                response.add_attachment(title=submission.title,
+                                                        title_link=submission.permalink, color='warning')
+                                response.post_to_channel(token=self.config.bot_user_token, channel='#rs_feed')
+                                submission.report("Possible soapbox attempt.")
+                    except AttributeError:
+                        pass
 
                     self.already_done.append(comment.id)
 
@@ -381,24 +405,52 @@ class RedditBot:
     @bot_threading.own_thread
     def monitor_modmail(self):
 
+        modmails = dict()
+
         while True:
-            self.r._use_oauth = False
-            modmail = self.r.get_mod_mail('santi871', limit=10)
 
-            muted_users = [track[1] for track in self.db.fetch_tracks("permamuted")]
+            try:
+                self.r._use_oauth = False
+                modmail = self.r.get_mod_mail(self.subreddit_name, limit=10)
 
-            self.r._use_oauth = False
-            for item in modmail:
-                if item.id not in self.already_done and item.author.name in muted_users:
+                muted_users = [track[1] for track in self.db.fetch_tracks("permamuted")]
 
-                    if not self.debug:
-                        item.mute_modmail_author()
+                self.r._use_oauth = False
+                for message in modmail:
+                    if message.id not in self.already_done:
 
-                    self.already_done.append(item.id)
+                        if message.author.name in muted_users:
 
-                    with open("already_done.txt", "a") as text_file:
-                        print(item.id + ",", end="", file=text_file)
-            sleep(30)
+                            if not self.debug:
+                                message.mute_modmail_author()
+
+                        modmails[message.id] = utils.SlackModmail(message, self.config.bot_user_token, "C208X7WR0")
+
+                        for reply in message.replies:
+                            modmails[message.id].add_reply(reply)
+                            with open("already_done.txt", "a") as text_file:
+                                print(reply.id + ",", end="", file=text_file)
+                            self.already_done.append(reply.id)
+
+                        self.already_done.append(message.id)
+
+                        with open("already_done.txt", "a") as text_file:
+                            print(message.id + ",", end="", file=text_file)
+
+                    else:
+                        for reply in message.replies:
+                            if reply.id not in self.already_done:
+                                try:
+                                    modmails[message.id].add_reply(reply)
+                                    with open("already_done.txt", "a") as text_file:
+                                        print(reply.id + ",", end="", file=text_file)
+                                    self.already_done.append(reply.id)
+                                except KeyError:
+                                    break
+            except AttributeError:
+                pass
+
+            sleep(5)
 
     @staticmethod
     def remove_from_file(filename, str_to_remove):

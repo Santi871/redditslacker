@@ -136,7 +136,7 @@ class SlackField:
 class SlackAttachment:
 
     def __init__(self, title=None, text=None, fallback=None, callback_id=None, color=None, title_link=None,
-                 image_url=None, footer=None):
+                 image_url=None, footer=None, author_name=None, ts=None):
 
         self.attachment_dict = dict()
 
@@ -156,6 +156,10 @@ class SlackAttachment:
             self.attachment_dict['text'] = text
         if footer is not None:
             self.attachment_dict['footer'] = footer
+        if author_name is not None:
+            self.attachment_dict['author_name'] = author_name
+        if ts is not None:
+            self.attachment_dict['ts'] = ts
 
         self.attachment_dict['mrkdwn_in'] = ['title', 'text']
 
@@ -195,28 +199,27 @@ class SlackResponse:
 
     def add_attachment(self, title=None, text=None, fallback=None, callback_id=None, color=None,
                        title_link=None, footer=None,
-                       image_url=None):
+                       image_url=None, author_name=None, ts=None):
 
         if 'attachments' not in self.response_dict:
             self.response_dict['attachments'] = []
 
         attachment = SlackAttachment(title=title, text=text, fallback=fallback, callback_id=callback_id, color=color,
-                                     title_link=title_link, image_url=image_url, footer=footer)
+                                     title_link=title_link, image_url=image_url, footer=footer, author_name=author_name,
+                                     ts=ts)
 
         self.attachments.append(attachment)
 
     def _prepare(self):
+        self.response_dict['attachments'] = []
         for attachment in self.attachments:
             self.response_dict['attachments'].append(attachment.attachment_dict)
-
-        self._is_prepared = True
 
     def get_json(self):
 
         """Returns the JSON form of the response, ready to be sent to Slack via POST data"""
 
-        if not self._is_prepared:
-            self._prepare()
+        self._prepare()
 
         return json.dumps(self.response_dict)
 
@@ -224,8 +227,7 @@ class SlackResponse:
 
         """Returns the dict form of the response, can be sent to Slack in GET or POST params"""
 
-        if not self._is_prepared:
-            self._prepare()
+        self._prepare()
 
         return self.response_dict
 
@@ -235,7 +237,12 @@ class SlackResponse:
         token that is passed. Passing as_user will make RS post the response as the user who authorized the app."""
 
         response_dict = self.get_dict()
-        response_dict['attachments'] = json.dumps(self.response_dict['attachments'])
+
+        try:
+            response_dict['attachments'] = json.dumps(self.response_dict['attachments'])
+        except KeyError:
+            pass
+
         response_dict['channel'] = channel
         response_dict['token'] = token
 
@@ -245,7 +252,12 @@ class SlackResponse:
         request_response = requests.post('https://slack.com/api/chat.postMessage',
                                          params=response_dict)
 
-        return request_response
+        try:
+            response_dict['attachments'] = json.loads(self.response_dict['attachments'])
+        except KeyError:
+            pass
+
+        return request_response.json().get('ts', None)
 
     def update_message(self, timestamp, channel, parse='full'):
 
@@ -359,3 +371,58 @@ Please [contact the moderators](%s) if you have any questions or concerns*
 """) % (s1, s3, s2)
 
     return comment
+
+
+class SlackModmail:
+
+    def __init__(self, root_mail, bot_token, channel):
+
+        self.channel = channel
+        self.current_color = 'good'
+        self.message_timestamp = None
+        self.bot_token = bot_token
+        self.root_mail = root_mail
+        self.root_mail_message = SlackResponse("------------------")
+
+        self.root_mail_message.add_attachment(title=root_mail.subject,
+                                              title_link="https://www.reddit.com/message/messages/" + root_mail.id,
+                                              text=root_mail.body, color=self.current_color,
+                                              author_name="/u/" + root_mail.author.name, ts=root_mail.created_utc)
+
+        self.root_mail_message.attachments[0].add_button("Summary", "summary", style='primary')
+        self.root_mail_message.attachments[0].add_button("Mark done", "done")
+        self.root_mail_message.attachments[0].add_button("Mark important", "important")
+        self.root_mail_message.attachments[0].add_button("Mute", "mute", style='danger')
+
+        self.n_replies = 0
+        self.post()
+
+    def get_current_color(self):
+
+        if self.current_color == "good":
+            self.current_color = "danger"
+            return "danger"
+        else:
+            self.current_color = "good"
+            return "good"
+
+    def add_reply(self, reply):
+
+        self.root_mail_message.add_attachment(text=reply.body, color=self.get_current_color(),
+                                              footer="/u/" + reply.author.name, ts=reply.created_utc)
+        self.n_replies += 1
+
+        print(str(self.root_mail_message.attachments))
+
+        self.post()
+
+    def post(self):
+
+        if self.message_timestamp is not None:
+            delete_request_params = dict()
+            delete_request_params['token'] = self.bot_token
+            delete_request_params['channel'] = self.channel
+            delete_request_params['ts'] = self.message_timestamp
+            requests.post("https://slack.com/api/chat.delete", params=delete_request_params)
+
+        self.message_timestamp = self.root_mail_message.post_to_channel(self.bot_token, self.channel)
