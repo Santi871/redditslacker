@@ -108,7 +108,7 @@ class RedditBot:
 
         return redditor.name
 
-    @bot_threading.own_thread
+    @bot_threading.own_thread()
     def request_comment_ban(self, kwargs):
 
         cmt_id = kwargs['cmt_id']
@@ -140,7 +140,7 @@ class RedditBot:
             response = utils.SlackResponse(text="Ban requested.")
             request.delayed_response(response)
 
-    @bot_threading.own_thread
+    @bot_threading.own_thread()
     def log_bans(self):
 
         if not self.config.banlist_populated:
@@ -158,7 +158,7 @@ class RedditBot:
 
             sleep(600)
 
-    @bot_threading.own_thread
+    @bot_threading.own_thread()
     def comments_feed(self):
 
         while True:
@@ -228,21 +228,21 @@ class RedditBot:
                         print(comment.id + ",", end="", file=text_file)
             sleep(120)
 
-    @bot_threading.own_thread
+    @bot_threading.own_thread()
     def remove_comment(self, kwargs):
         cmt_id = kwargs['cmt_id']
         self.r._use_oauth = False
         comment = self.r.get_info(thing_id="t1_" + cmt_id)
         comment.remove()
 
-    @bot_threading.own_thread
+    @bot_threading.own_thread()
     def approve_comment(self, kwargs):
         cmt_id = kwargs['cmt_id']
         self.r._use_oauth = False
         comment = self.r.get_info(thing_id="t1_" + cmt_id)
         comment.approve()
 
-    @bot_threading.own_thread
+    @bot_threading.own_thread()
     def report_comment(self, kwargs):
         cmt_id = kwargs['cmt_id']
         reason = kwargs['reason']
@@ -250,11 +250,11 @@ class RedditBot:
         comment = self.r.get_info(thing_id="t1_" + cmt_id)
         comment.report(reason)
 
-    @bot_threading.own_thread
+    @bot_threading.own_thread()
     def reset_user_tracks(self):
         self.db.reset_user_tracks()
 
-    @bot_threading.own_thread
+    @bot_threading.own_thread()
     def track_users(self):
         subreddit = self.r.get_subreddit(self.subreddit_name)
         ignored_users = ['ELI5_BotMod', 'AutoModerator']
@@ -402,7 +402,7 @@ class RedditBot:
                             pass
             sleep(300)
 
-    @bot_threading.own_thread
+    @bot_threading.own_thread()
     def monitor_modmail(self):
 
         modmails = dict()
@@ -466,7 +466,7 @@ class RedditBot:
         with open(filename, "w") as text_file:
             text_file.write(','.join(file_data))
 
-    @bot_threading.own_thread
+    @bot_threading.own_thread()
     def handle_unflaired(self):
         print("Starting handle_unflaired thread...")
 
@@ -555,7 +555,7 @@ class RedditBot:
 
         return redditor.link_karma + redditor.comment_karma, date
 
-    @bot_threading.own_thread
+    @bot_threading.own_thread()
     def summary(self, kwargs):
 
         username = kwargs['username']
@@ -797,7 +797,7 @@ class RedditBot:
         if request is not None:
             response = request.delayed_response(response)
 
-    @bot_threading.own_thread
+    @bot_threading.own_thread()
     def shadowban(self, kwargs):
 
         username = kwargs['username']
@@ -861,7 +861,7 @@ class RedditBot:
 
             request.delayed_response(response)
 
-    @bot_threading.own_thread
+    @bot_threading.own_thread()
     def unshadowban(self, kwargs):
 
         username = kwargs['username']
@@ -909,7 +909,7 @@ class RedditBot:
                                         color='danger')
         request.delayed_response(response)
 
-    @bot_threading.own_thread
+    @bot_threading.own_thread()
     def add_usernote(self, kwargs):
         user = kwargs['user']
         note = kwargs['note']
