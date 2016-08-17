@@ -160,10 +160,10 @@ class RedditBot:
             limit = 20
 
         while True:
-            
+
+            o.refresh()
             bans = r.get_subreddit(self.subreddit_name).get_banned(limit=limit, user_only=False, fetch=True)
 
-            
             for ban in bans:
                     self.db.log_ban(ban)
 
@@ -609,7 +609,14 @@ class RedditBot:
         user_is_permamuted = user_status[3]
         user_is_tracked = user_status[4]
         user_is_shadowbanned = user_status[5]
-        combined_karma = user.link_karma + user.comment_karma
+
+        try:
+            combined_karma = user.link_karma + user.comment_karma
+        except AttributeError:
+            response = utils.SlackResponse()
+            response.add_attachment(fallback="Summary error.", title="Error: user not found.", color='danger')
+            return request.delayed_response(response)
+
         account_creation = str(datetime.datetime.fromtimestamp(user.created_utc))
         
         last_note = self.get_last_note(username)
@@ -675,7 +682,6 @@ class RedditBot:
             karma_accumulator = 0
             karma_accumulated = []
             karma_accumulated_total = []
-
             
             for comment in user.get_comments(limit=limit):
 
@@ -862,7 +868,6 @@ class RedditBot:
                                      reason='RedditSlacker shadowban user "/u/%s" executed by Slack user "%s"'
                                             % (username, author))
 
-                    
                     self.un.add_note(n)
 
                 response = utils.SlackResponse(text="User */u/%s* has been shadowbanned." % username)
@@ -917,9 +922,6 @@ class RedditBot:
                     self.r.edit_wiki_page(self.subreddit_name, "config/automoderator", wiki_page_content,
                                           reason='RedditSlacker unshadowban user "/u/%s" executed by Slack user "%s"'
                                                  % (username, author))
-
-                    
-                    # self.un.add_note(n)
 
                 response = utils.SlackResponse(text="User */u/%s* has been unshadowbanned." % username)
 
