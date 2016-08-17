@@ -124,7 +124,7 @@ class RedditBot:
         author = request.user
 
         try:
-            self.r._use_oauth = False
+            
             comment = self.r.get_info(thing_id='t1_' + cmt_id)
         except praw.errors.NotFound:
             comment = None
@@ -159,10 +159,10 @@ class RedditBot:
             limit = 20
 
         while True:
-            self.r._use_oauth = False
+            
             bans = r.get_subreddit(self.subreddit_name).get_banned(limit=limit, user_only=False, fetch=True)
 
-            self.r._use_oauth = False
+            
             for ban in bans:
                     self.db.log_ban(ban)
 
@@ -178,13 +178,11 @@ class RedditBot:
 
             tracked_users = [track[1].lower() for track in self.db.fetch_tracks("tracked")]
 
-            self.r._use_oauth = False
             comments = r.get_subreddit(self.subreddit_name).get_comments(limit=100, sort='new')
 
             for comment in comments:
 
                 if comment.id not in self.already_done:
-                    self.r._use_oauth = False
 
                     try:
                         submission = comment.submission
@@ -196,7 +194,7 @@ class RedditBot:
 
                         response = utils.SlackResponse()
 
-                        self.r._use_oauth = False
+                        
                         response.add_attachment(text=comment.body,
                                                 color="#0073a3", title=submission.title,
                                                 title_link=comment.permalink, callback_id="tlcfeed")
@@ -212,13 +210,13 @@ class RedditBot:
                     if comment.author.name.lower() in tracked_users:
                         response = utils.SlackResponse(text="New comment by user /u/" + comment.author.name)
 
-                        self.r._use_oauth = False
+                        
                         response.add_attachment(title=submission.title, title_link=comment.permalink,
                                                 text=comment.body, color="#warning")
 
                         response.post_to_channel(token=self.config.bot_user_token, channel='#rs_feed')
 
-                    self.r._use_oauth = False
+                    
 
                     try:
                         if comment.author.name.lower() == submission.author.name.lower()\
@@ -244,14 +242,14 @@ class RedditBot:
     @bot_threading.own_thread()
     def remove_comment(self, kwargs):
         cmt_id = kwargs['cmt_id']
-        self.r._use_oauth = False
+        
         comment = self.r.get_info(thing_id="t1_" + cmt_id)
         comment.remove()
 
     @bot_threading.own_thread()
     def approve_comment(self, kwargs):
         cmt_id = kwargs['cmt_id']
-        self.r._use_oauth = False
+        
         comment = self.r.get_info(thing_id="t1_" + cmt_id)
         comment.approve()
 
@@ -259,7 +257,7 @@ class RedditBot:
     def report_comment(self, kwargs):
         cmt_id = kwargs['cmt_id']
         reason = kwargs['reason']
-        self.r._use_oauth = False
+        
         comment = self.r.get_info(thing_id="t1_" + cmt_id)
         comment.report(reason)
 
@@ -276,7 +274,7 @@ class RedditBot:
         ignored_users = ['ELI5_BotMod', 'AutoModerator']
 
         while True:
-            self.r._use_oauth = False
+            
             modlog = subreddit.get_mod_log(limit=30)
             already_done_user = []
 
@@ -428,12 +426,11 @@ class RedditBot:
         while True:
 
             try:
-                self.r._use_oauth = False
+                
                 modmail = r.get_mod_mail(self.subreddit_name, limit=10)
 
                 muted_users = [track[1] for track in self.db.fetch_tracks("permamuted")]
 
-                self.r._use_oauth = False
                 for message in modmail:
                     if message.id not in self.already_done:
 
@@ -496,15 +493,14 @@ class RedditBot:
 
             highest_timestamp = datetime.datetime.now() - datetime.timedelta(minutes=10)
             try:
-                self.r._use_oauth = False
+                
                 submissions = r.get_subreddit(self.subreddit_name).get_new(limit=20)
 
                 for submission in submissions:
 
                     if submission.author.name.lower() in tracked_users and submission.id not in self.already_done:
                         response = utils.SlackResponse(text="New submission by user /u/" + submission.author.name)
-
-                        self.r._use_oauth = False
+                        
                         response.add_attachment(title=submission.title, title_link=submission.permalink,
                                                 text=submission.body, color="#warning")
 
@@ -606,7 +602,7 @@ class RedditBot:
         user_is_shadowbanned = user_status[5]
         combined_karma = user.link_karma + user.comment_karma
         account_creation = str(datetime.datetime.fromtimestamp(user.created_utc))
-        self.r._use_oauth = False
+        
         last_note = self.get_last_note(username)
 
         response = utils.SlackResponse(replace_original=replace_original)
@@ -671,7 +667,7 @@ class RedditBot:
             karma_accumulated = []
             karma_accumulated_total = []
 
-            self.r._use_oauth = False
+            
             for comment in user.get_comments(limit=limit):
 
                 displayname = comment.subreddit.display_name
@@ -834,7 +830,7 @@ class RedditBot:
         username = user.name
 
         if author in self.usergroup_mod:
-            self.r._use_oauth = False
+            
             wiki_page = r.get_wiki_page(self.subreddit_name, "config/automoderator")
             wiki_page_content = wiki_page.content_md
 
@@ -852,12 +848,12 @@ class RedditBot:
                          wiki_page_content[end_ind:]
 
                 if not self.debug:
-                    self.r._use_oauth = False
+                    
                     r.edit_wiki_page(self.subreddit_name, "config/automoderator", newstr,
                                      reason='RedditSlacker shadowban user "/u/%s" executed by Slack user "%s"'
                                             % (username, author))
 
-                    self.r._use_oauth = False
+                    
                     self.un.add_note(n)
 
                 response = utils.SlackResponse(text="User */u/%s* has been shadowbanned." % username)
@@ -897,7 +893,7 @@ class RedditBot:
         username = user.name
 
         if author in self.usergroup_mod:
-            self.r._use_oauth = False
+            
             wiki_page = self.r.get_wiki_page(self.subreddit_name, "config/automoderator")
             wiki_page_content = wiki_page.content_md
 
@@ -908,12 +904,12 @@ class RedditBot:
                               username, '', 'botban')
 
                 if not self.debug:
-                    self.r._use_oauth = False
+                    
                     self.r.edit_wiki_page(self.subreddit_name, "config/automoderator", wiki_page_content,
                                           reason='RedditSlacker unshadowban user "/u/%s" executed by Slack user "%s"'
                                                  % (username, author))
 
-                    self.r._use_oauth = False
+                    
                     # self.un.add_note(n)
 
                 response = utils.SlackResponse(text="User */u/%s* has been unshadowbanned." % username)
@@ -935,7 +931,7 @@ class RedditBot:
         request = kwargs['request']
 
         try:
-            self.r._use_oauth = False
+            
             user = self.r.get_redditor(user)
         except praw.errors.NotFound:
             response = utils.SlackResponse()
@@ -945,7 +941,7 @@ class RedditBot:
         n = puni.Note(user.name, note + " | Note added by RedditSlacker, executed by user '%s'" % author,
                       user.name, '', 'abusewarn')
 
-        self.r._use_oauth = False
+        
         self.un.add_note(n)
 
         response = utils.SlackResponse()
