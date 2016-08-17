@@ -39,15 +39,19 @@ class CreateThread(threading.Thread):
                 sleep(10)
 
 
-def own_thread(func):
-    def wrapped_f(*args, **kwargs):
-        # Create a thread with the method we called
-        if not kwargs:
-            kwargs = None
+def own_thread(dedicated=False):
 
-        thread = CreateThread(1, str(func) + " thread", args[0], func, kwargs)
-        thread.start()
+    def inner_f(func):
+        def wrapped_f(*args, **kwargs):
+            # Create a thread with the method we called
+            if not kwargs:
+                kwargs = None
 
-    return wrapped_f
+            if not dedicated:
+                thread = CreateThread(1, str(func) + " thread", args[0], func, kwargs)
+                thread.start()
+
+        return wrapped_f
+    return inner_f
 
 
