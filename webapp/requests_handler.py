@@ -29,7 +29,6 @@ class RequestsHandler:
 
         for sub, config in self.configs.items():
             self.bots[sub] = bot.RedditBot(self.databases[sub], self.configs[sub])
-            sleep(5)
 
         self.temp_team_id = None
         self.temp_bot_token = None

@@ -152,6 +152,7 @@ class RedditBot:
     def log_bans(self, kwargs):
         print("Starting log_bans thread...")
         r = kwargs['r']
+        o = kwargs['o']
 
         if not self.config.banlist_populated:
             limit = None
@@ -173,9 +174,11 @@ class RedditBot:
         print("Starting comments_feed thread...")
 
         r = kwargs['r']
+        o = kwargs['o']
 
         while True:
 
+            o.refresh()
             tracked_users = [track[1].lower() for track in self.db.fetch_tracks("tracked")]
 
             comments = r.get_subreddit(self.subreddit_name).get_comments(limit=100, sort='new')
@@ -270,6 +273,7 @@ class RedditBot:
 
         print("Starting track_users thread...")
         r = kwargs['r']
+        o = kwargs['o']
         subreddit = r.get_subreddit(self.subreddit_name)
         ignored_users = ['ELI5_BotMod', 'AutoModerator']
 
@@ -277,6 +281,7 @@ class RedditBot:
             
             modlog = subreddit.get_mod_log(limit=30)
             already_done_user = []
+            o.refresh()
 
             for item in modlog:
                 if item.id not in self.already_done and item.target_fullname not in self.already_done and \
@@ -422,8 +427,10 @@ class RedditBot:
 
         modmails = dict()
         r = kwargs['r']
+        o = kwargs['o']
 
         while True:
+            o.refresh()
 
             try:
                 
@@ -486,11 +493,13 @@ class RedditBot:
         print("Starting handle_unflaired thread...")
 
         r = kwargs['r']
+        o = kwargs['o']
         unflaired_submissions = self.db.fetch_unflaired_submissions(r)
         tracked_users = [track[1].lower() for track in self.db.fetch_tracks("tracked")]
 
         while True:
 
+            o.refresh()
             highest_timestamp = datetime.datetime.now() - datetime.timedelta(minutes=10)
             try:
                 

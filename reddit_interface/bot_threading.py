@@ -55,13 +55,13 @@ def own_thread(dedicated=False):
                 handler = praw.handlers.MultiprocessHandler()
                 r = praw.Reddit(user_agent="windows:RedditSlacker 0.3 by /u/santi871", handler=handler)
                 o = OAuth2Util.OAuth2Util(r)
-                o.refresh(force=True)
                 r.config.api_request_delay = 1
 
                 if kwargs is not None:
                     kwargs['r'] = r
+                    kwargs['o'] = o
                 else:
-                    kwargs = {'r': r}
+                    kwargs = {'r': r, 'o': o}
 
                 thread = CreateThread(1, str(func) + " thread", args[0], func, kwargs)
                 thread.start()
