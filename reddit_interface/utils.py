@@ -412,8 +412,6 @@ class SlackModmail:
                                               footer="/u/" + reply.author.name, ts=reply.created_utc)
         self.n_replies += 1
 
-        print(str(self.root_mail_message.attachments))
-
         self.post()
 
     def post(self):
