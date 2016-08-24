@@ -165,7 +165,7 @@ class RedditBot:
             bans = r.get_subreddit(self.subreddit_name).get_banned(limit=limit, user_only=False, fetch=True)
 
             for ban in bans:
-                    self.db.log_ban(ban)
+                self.db.log_ban(ban)
 
             sleep(600)
 
@@ -196,7 +196,6 @@ class RedditBot:
                             and comment.author.name != 'AutoModerator' and comment.banned_by is None:
 
                         response = utils.SlackResponse()
-
                         
                         response.add_attachment(text=comment.body,
                                                 color="#0073a3", title=submission.title,
@@ -212,7 +211,6 @@ class RedditBot:
 
                     if comment.author.name.lower() in tracked_users:
                         response = utils.SlackResponse(text="New comment by user /u/" + comment.author.name)
-
                         
                         response.add_attachment(title=submission.title, title_link=comment.permalink,
                                                 text=comment.body, color="#warning")
@@ -541,7 +539,6 @@ class RedditBot:
                 for unflaired_submission_obj in unflaired_submissions:
 
                     submission = unflaired_submission_obj.submission
-                    r._use_oauth = False
                     submission = r.get_submission(submission_id=submission.id)
                     comment = unflaired_submission_obj.comment
 
@@ -952,7 +949,6 @@ class RedditBot:
         n = puni.Note(user.name, note + " | Note added by RedditSlacker, executed by user '%s'" % author,
                       user.name, '', 'abusewarn')
 
-        
         self.un.add_note(n)
 
         response = utils.SlackResponse()
