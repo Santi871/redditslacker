@@ -149,10 +149,8 @@ class RedditBot:
             request.delayed_response(response)
 
     @bot_threading.own_thread(dedicated=True)
-    def log_bans(self, kwargs):
+    def log_bans(self, r, o):
         print("Starting log_bans thread...")
-        r = kwargs['r']
-        o = kwargs['o']
 
         if not self.config.banlist_populated:
             limit = None
@@ -170,11 +168,8 @@ class RedditBot:
             sleep(600)
 
     @bot_threading.own_thread(dedicated=True)
-    def comments_feed(self, kwargs):
+    def comments_feed(self, r, o):
         print("Starting comments_feed thread...")
-
-        r = kwargs['r']
-        o = kwargs['o']
 
         while True:
 
@@ -267,11 +262,9 @@ class RedditBot:
         self.db.reset_user_tracks()
 
     @bot_threading.own_thread(dedicated=True)
-    def track_users(self, kwargs):
+    def track_users(self, r, o):
 
         print("Starting track_users thread...")
-        r = kwargs['r']
-        o = kwargs['o']
         subreddit = r.get_subreddit(self.subreddit_name)
         ignored_users = ['ELI5_BotMod', 'AutoModerator']
 
@@ -420,12 +413,10 @@ class RedditBot:
             sleep(300)
 
     @bot_threading.own_thread(dedicated=True)
-    def monitor_modmail(self, kwargs):
+    def monitor_modmail(self, r, o):
         print("Starting monitor_modmail thread...")
 
         modmails = dict()
-        r = kwargs['r']
-        o = kwargs['o']
 
         while True:
             o.refresh()
@@ -487,11 +478,9 @@ class RedditBot:
             text_file.write(','.join(file_data))
 
     @bot_threading.own_thread(dedicated=True)
-    def handle_unflaired(self, kwargs):
+    def handle_unflaired(self, r, o):
         print("Starting handle_unflaired thread...")
 
-        r = kwargs['r']
-        o = kwargs['o']
         unflaired_submissions = self.db.fetch_unflaired_submissions(r)
         tracked_users = [track[1].lower() for track in self.db.fetch_tracks("tracked")]
 
