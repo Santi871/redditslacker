@@ -236,23 +236,19 @@ class RedditBot:
             sleep(120)
 
     @bot_threading.own_thread()
-    def remove_comment(self, kwargs):
-        cmt_id = kwargs['cmt_id']
+    def remove_comment(self, cmt_id):
         
         comment = self.r.get_info(thing_id="t1_" + cmt_id)
         comment.remove()
 
     @bot_threading.own_thread()
-    def approve_comment(self, kwargs):
-        cmt_id = kwargs['cmt_id']
+    def approve_comment(self, cmt_id):
         
         comment = self.r.get_info(thing_id="t1_" + cmt_id)
         comment.approve()
 
     @bot_threading.own_thread()
-    def report_comment(self, kwargs):
-        cmt_id = kwargs['cmt_id']
-        reason = kwargs['reason']
+    def report_comment(self, cmt_id, reason):
         
         comment = self.r.get_info(thing_id="t1_" + cmt_id)
         comment.report(reason)
@@ -565,12 +561,7 @@ class RedditBot:
         return redditor.link_karma + redditor.comment_karma, date
 
     @bot_threading.own_thread()
-    def summary(self, kwargs):
-
-        username = kwargs['username']
-        request = kwargs['request']
-        no_summary = kwargs.get('no_summary', False)
-        replace_original = kwargs.get('replace_original', False)
+    def summary(self, username, request, no_summary=False, replace_original=False):
 
         if no_summary == "quick":
             no_summary = True
@@ -813,11 +804,7 @@ class RedditBot:
             response = request.delayed_response(response)
 
     @bot_threading.own_thread()
-    def shadowban(self, kwargs):
-
-        username = kwargs['username']
-        request = kwargs['request']
-        author = kwargs['author']
+    def shadowban(self, username, request, author):
 
         r = self.r
 
@@ -876,11 +863,8 @@ class RedditBot:
             request.delayed_response(response)
 
     @bot_threading.own_thread()
-    def unshadowban(self, kwargs):
+    def unshadowban(self, username, request, author):
 
-        username = kwargs['username']
-        request = kwargs['request']
-        author = kwargs['author']
         response = utils.SlackResponse(text="Failed to unshadowban user.")
 
         try:
@@ -921,11 +905,7 @@ class RedditBot:
         request.delayed_response(response)
 
     @bot_threading.own_thread()
-    def add_usernote(self, kwargs):
-        user = kwargs['user']
-        note = kwargs['note']
-        author = kwargs['author']
-        request = kwargs['request']
+    def add_usernote(self, user, note, author, request):
 
         try:
             
