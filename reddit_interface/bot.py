@@ -117,10 +117,8 @@ class RedditBot:
         return redditor.name
 
     @bot_threading.own_thread()
-    def request_comment_ban(self, kwargs):
+    def request_comment_ban(self, cmt_id, request):
 
-        cmt_id = kwargs['cmt_id']
-        request = kwargs['request']
         author = request.user
 
         try:
