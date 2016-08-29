@@ -811,7 +811,6 @@ class RedditBot:
             user = self.r.get_redditor(username, fetch=True)
             username = user.name
         except praw.errors.NotFound:
-            response = utils.SlackResponse()
             response.add_attachment(fallback="Shadowban warning.", title="Warning: user not found.", color='warning')
 
         if author.lower() in self.usergroup_mod:
