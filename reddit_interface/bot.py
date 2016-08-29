@@ -40,7 +40,7 @@ class RedditBot:
         self.usergroup_mod = ('santi871', 'akuthia', 'mason11987', 'mike_pants', 'mjcapples', 'securethruobscure',
                               'snewzie', 'teaearlgraycold', 'thom.willard', 'yarr', 'cow_co', 'sterlingphoenix',
                               'hugepilchard', 'curmudgy', 'h2g2_researcher', 'jim777ps3', 'letstrythisagain_',
-                              'mr_magnus', 'terrorpaw', 'kodack10', 'doc_daneeka')
+                              'mr_magnus', 'terrorpaw', 'kodack10', 'doc_daneeka', 'heliopteryx')
 
         self.already_done = self.fetch_already_done("already_done.txt")
 
@@ -815,7 +815,7 @@ class RedditBot:
 
         username = user.name
 
-        if author in self.usergroup_mod:
+        if author.lower() in self.usergroup_mod:
             
             wiki_page = r.get_wiki_page(self.subreddit_name, "config/automoderator")
             wiki_page_content = wiki_page.content_md
@@ -857,8 +857,12 @@ class RedditBot:
                                         title="Exception",
                                         text=traceback.format_exc(),
                                         color='danger')
+        else:
+            response = utils.SlackResponse()
+            response.add_attachment(fallback="Shadowban error.",
+                                    title="Error: you are not authorized to perform this action.", color='danger')
 
-            request.delayed_response(response)
+        request.delayed_response(response)
 
     @bot_threading.own_thread()
     def unshadowban(self, username, request, author):
