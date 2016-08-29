@@ -845,7 +845,7 @@ class RedditBot:
                                         title_link="https://www.reddit.com/user/" + username,
                                         color='good')
 
-                response.attachments[len(response.attachments)+1].add_field("Author", author)
+                response.attachments[len(response.attachments) - 1].add_field("Author", author)
 
             except AssertionError:
                 raise
