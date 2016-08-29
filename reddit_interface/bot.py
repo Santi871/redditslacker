@@ -805,15 +805,14 @@ class RedditBot:
     def shadowban(self, username, request, author):
 
         r = self.r
+        response = utils.SlackResponse(text="User */u/%s* has been shadowbanned." % username)
 
         try:
             user = self.r.get_redditor(username, fetch=True)
+            username = user.name
         except praw.errors.NotFound:
             response = utils.SlackResponse()
-            response.add_attachment(fallback="Shadowban error.", title="Error: user not found.", color='danger')
-            return request.delayed_response(response)
-
-        username = user.name
+            response.add_attachment(fallback="Shadowban warning.", title="Warning: user not found.", color='warning')
 
         if author.lower() in self.usergroup_mod:
             
@@ -841,7 +840,6 @@ class RedditBot:
 
                     self.un.add_note(n)
 
-                response = utils.SlackResponse(text="User */u/%s* has been shadowbanned." % username)
                 response.add_attachment(fallback="Shadowbanned /u/" + username,
                                         title="User profile",
                                         title_link="https://www.reddit.com/user/" + username,
