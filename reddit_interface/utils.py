@@ -33,13 +33,14 @@ def get_config_sections(filename='config.ini'):
 
 class RSConfig:
 
+    """Associates a section of the config.ini file with a Slack team and parses the config parameters contained there"""
+
     def __init__(self, subreddit, filename='config.ini'):
         self.filename = filename
         self.config = configparser.ConfigParser()
         self.config.read(filename)
         self.subreddit = subreddit
         self.slackteam_id = None
-        self.mode = None
         self.comment_warning_threshold = None
         self.submission_warning_threshold = None
         self.ban_warning_threshold = None
@@ -53,13 +54,13 @@ class RSConfig:
         self.monitor_modlog = None
         self.remove_unflaired = None
         self.bot_user_token = None
+        self.banlist_populated = None
 
         self._update()
 
     def _update(self):
 
         self.slackteam_id = self.config.get(self.subreddit, "slackteam_id")
-        self.mode = self.config.get(self.subreddit, "mode")
         self.comment_warning_threshold = self.config.getint(self.subreddit, "comment_warning_threshold")
         self.comment_warning_threshold_high = self.config.getint(self.subreddit, "comment_warning_threshold_high")
         self.submission_warning_threshold = self.config.getint(self.subreddit, "submission_warning_threshold")
@@ -73,14 +74,15 @@ class RSConfig:
         self.monitor_submissions = self.config.getboolean(self.subreddit, "monitor_submissions")
         self.monitor_comments = self.config.getboolean(self.subreddit, "monitor_comments")
         self.remove_unflaired = self.config.getboolean(self.subreddit, "remove_unflaired")
+        self.banlist_populated = self.config.getboolean(self.subreddit, "banlist_populated")
 
-    def get_config(self, name, section):
-        return self.config.get(section, name)
+    def get_config(self, name):
+        return self.config.get(self.subreddit, name)
 
     def set_config(self, name, value):
 
         try:
-            self.get_config(name, self.subreddit)
+            self.get_config(name)
         except configparser.NoOptionError:
             return False
 
@@ -89,6 +91,15 @@ class RSConfig:
         with open(self.filename, 'w') as configfile:
             self.config.write(configfile)
         return True
+
+    def list_config(self):
+        config_str = ""
+
+        for key, val in self.config.items(self.subreddit):
+            if key != "bot_user_token":
+                config_str += key + " = " + val + "\n"
+
+        return config_str
 
 
 class SlackButton:
@@ -125,7 +136,7 @@ class SlackField:
 class SlackAttachment:
 
     def __init__(self, title=None, text=None, fallback=None, callback_id=None, color=None, title_link=None,
-                 image_url=None, footer=None):
+                 image_url=None, footer=None, author_name=None, ts=None):
 
         self.attachment_dict = dict()
 
@@ -145,6 +156,10 @@ class SlackAttachment:
             self.attachment_dict['text'] = text
         if footer is not None:
             self.attachment_dict['footer'] = footer
+        if author_name is not None:
+            self.attachment_dict['author_name'] = author_name
+        if ts is not None:
+            self.attachment_dict['ts'] = ts
 
         self.attachment_dict['mrkdwn_in'] = ['title', 'text']
 
@@ -167,6 +182,8 @@ class SlackAttachment:
 
 class SlackResponse:
 
+    """Class used for easy crafting of a Slack response"""
+
     def __init__(self, text=None, response_type="in_channel", replace_original=True):
         self.response_dict = dict()
         self.attachments = []
@@ -182,38 +199,50 @@ class SlackResponse:
 
     def add_attachment(self, title=None, text=None, fallback=None, callback_id=None, color=None,
                        title_link=None, footer=None,
-                       image_url=None):
+                       image_url=None, author_name=None, ts=None):
 
         if 'attachments' not in self.response_dict:
             self.response_dict['attachments'] = []
 
         attachment = SlackAttachment(title=title, text=text, fallback=fallback, callback_id=callback_id, color=color,
-                                     title_link=title_link, image_url=image_url, footer=footer)
+                                     title_link=title_link, image_url=image_url, footer=footer, author_name=author_name,
+                                     ts=ts)
 
         self.attachments.append(attachment)
 
     def _prepare(self):
+        self.response_dict['attachments'] = []
         for attachment in self.attachments:
             self.response_dict['attachments'].append(attachment.attachment_dict)
 
-        self._is_prepared = True
-
     def get_json(self):
-        if not self._is_prepared:
-            self._prepare()
+
+        """Returns the JSON form of the response, ready to be sent to Slack via POST data"""
+
+        self._prepare()
 
         return json.dumps(self.response_dict)
 
     def get_dict(self):
-        if not self._is_prepared:
-            self._prepare()
+
+        """Returns the dict form of the response, can be sent to Slack in GET or POST params"""
+
+        self._prepare()
 
         return self.response_dict
 
     def post_to_channel(self, token, channel, as_user=False):
 
+        """Posts the SlackResponse object to a specific channel. The Slack team it's posted to depends on the
+        token that is passed. Passing as_user will make RS post the response as the user who authorized the app."""
+
         response_dict = self.get_dict()
-        response_dict['attachments'] = json.dumps(self.response_dict['attachments'])
+
+        try:
+            response_dict['attachments'] = json.dumps(self.response_dict['attachments'])
+        except KeyError:
+            pass
+
         response_dict['channel'] = channel
         response_dict['token'] = token
 
@@ -223,7 +252,12 @@ class SlackResponse:
         request_response = requests.post('https://slack.com/api/chat.postMessage',
                                          params=response_dict)
 
-        return request_response
+        try:
+            response_dict['attachments'] = json.loads(self.response_dict['attachments'])
+        except KeyError:
+            pass
+
+        return request_response.json().get('ts', None)
 
     def update_message(self, timestamp, channel, parse='full'):
 
@@ -240,6 +274,8 @@ class SlackResponse:
 
 
 class SlackRequest:
+
+    """Parses HTTP request from Slack"""
 
     def __init__(self, request):
 
@@ -277,6 +313,10 @@ class SlackRequest:
             self.is_valid = True
 
     def delayed_response(self, response):
+
+        """Slack demands a response within 3 seconds. Additional responses can be sent through this method, in the
+        form of a SlackRequest object or plain text string"""
+
         headers = {"content-type": "plain/text"}
 
         if isinstance(response, SlackResponse):
@@ -331,3 +371,56 @@ Please [contact the moderators](%s) if you have any questions or concerns*
 """) % (s1, s3, s2)
 
     return comment
+
+
+class SlackModmail:
+
+    def __init__(self, root_mail, bot_token, channel):
+
+        self.channel = channel
+        self.current_color = 'good'
+        self.message_timestamp = None
+        self.bot_token = bot_token
+        self.root_mail = root_mail
+        self.root_mail_message = SlackResponse("------------------")
+
+        self.root_mail_message.add_attachment(title=root_mail.subject,
+                                              title_link="https://www.reddit.com/message/messages/" + root_mail.id,
+                                              text=root_mail.body, color=self.current_color,
+                                              author_name="/u/" + root_mail.author.name, ts=root_mail.created_utc)
+
+        self.root_mail_message.attachments[0].add_button("Summary", "summary", style='primary')
+        self.root_mail_message.attachments[0].add_button("Mark done", "done")
+        self.root_mail_message.attachments[0].add_button("Mark important", "important")
+        self.root_mail_message.attachments[0].add_button("Mute", "mute", style='danger')
+
+        self.n_replies = 0
+        self.post()
+
+    def get_current_color(self):
+
+        if self.current_color == "good":
+            self.current_color = "danger"
+            return "danger"
+        else:
+            self.current_color = "good"
+            return "good"
+
+    def add_reply(self, reply):
+
+        self.root_mail_message.add_attachment(text=reply.body, color=self.get_current_color(),
+                                              footer="/u/" + reply.author.name, ts=reply.created_utc)
+        self.n_replies += 1
+
+        self.post()
+
+    def post(self):
+
+        if self.message_timestamp is not None:
+            delete_request_params = dict()
+            delete_request_params['token'] = self.bot_token
+            delete_request_params['channel'] = self.channel
+            delete_request_params['ts'] = self.message_timestamp
+            requests.post("https://slack.com/api/chat.delete", params=delete_request_params)
+
+        self.message_timestamp = self.root_mail_message.post_to_channel(self.bot_token, self.channel)

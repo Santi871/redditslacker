@@ -3,7 +3,7 @@ import requests
 from flask import Flask, request, Response
 from flask_sslify import SSLify
 import reddit_interface.utils as utils
-import webapp.requests_handler as commands_handler
+from webapp.requests_handler import RequestsHandler
 
 APP_SECRET_KEY = utils.get_token("FLASK_APP_SECRET_KEY")
 SLACK_APP_ID = utils.get_token("SLACK_APP_ID")
@@ -14,7 +14,7 @@ os.environ["OAUTHLIB_RELAX_TOKEN_SCOPE"] = '1'
 app = Flask(__name__, static_url_path='')
 sslify = SSLify(app)
 app.secret_key = APP_SECRET_KEY
-commands_handler_obj = commands_handler.RequestsHandler()
+handler = RequestsHandler()
 
 
 @app.route("/oauthcallback")
@@ -30,8 +30,7 @@ def command():
     slack_request = utils.SlackRequest(request)
     if slack_request.is_valid:
 
-        # commands_handler_obj.db.log_command(request.form)
-        response = commands_handler_obj.command_response(slack_request, form=request.form)
+        response = handler.command_response(slack_request, form=request.form)
 
         return Response(response=response.get_json(), mimetype="application/json")
 
@@ -45,7 +44,7 @@ def button_response():
     slack_request = utils.SlackRequest(request)
     if slack_request.is_valid:
 
-        response = commands_handler_obj.button_response(slack_request)
+        response = handler.button_response(slack_request)
 
         if response is None:
             return Response(status=200)
