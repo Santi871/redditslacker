@@ -525,7 +525,7 @@ class RedditBot:
                     submission = r.get_submission(submission_id=submission.id)
                     comment = unflaired_submission_obj.comment
 
-                    if submission.link_flair_text is not None and submission.banned_by.lower() == "eli5_botmod":
+                    if submission.link_flair_text is not None:
                         submission.approve()
 
                         for report in submission.mod_reports:
