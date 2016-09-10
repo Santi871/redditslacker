@@ -428,8 +428,28 @@ will be deleted.
 
 * Click the flair button under your question and pick a category from the list (if you are on desktop).
 
-* If you are not on desktop, reply to this message with the flair you want. You can see the list of available flairs
-in the sidebar. (Example: if you want the Biology flair, reply to this message with "biology").
+* If you are not on desktop, reply to this message with the flair you want.
+(Example: if you want the Biology flair, reply to this message with "biology").
+
+**List of available flairs:**
+
+* Biology
+
+* Technology
+
+* Engineering
+
+* Culture
+
+* Physics
+
+* Mathematics
+
+* Economics
+
+* Chemistry
+
+* Other
 
 ---
 
