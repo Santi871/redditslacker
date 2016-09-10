@@ -384,8 +384,9 @@ class UnflairedSubmission:
             return True
         else:
             for comment in comments:
-                if comment.body.lower() in self.flairs:
-                    flair = comment.body[0].upper() + comment.body[1:]
+                body = comment.body.split()
+                if body[0] in self.flairs:
+                    flair = comment.body[0].upper() + comment.body[1:].lower()
                     self.r.set_flair(self.sub, self.submission, flair, flair)
                     return True
         return False
