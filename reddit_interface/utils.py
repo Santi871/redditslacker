@@ -384,13 +384,13 @@ class UnflairedSubmission:
         else:
             for comment in comments:
                 body = comment.body.split()
-                print(body[0])
-                if body[0].lower() in self.flairs and comment.author.name == self.submission.author.name:
-                    print("in")
-                    flair = comment.body[0].upper() + comment.body[1:].lower()
-                    comment.remove()
-                    self.r.set_flair(self.sub, self.submission, flair, flair)
-                    return True
+                if len(body) < 4:
+                    for word in body:
+                        if word.lower() in self.flairs and comment.author.name == self.submission.author.name:
+                            flair = word.upper() + word.lower()
+                            comment.remove()
+                            self.r.set_flair(self.sub, self.submission, flair, flair)
+                            return True
         return False
 
     def approve(self):
