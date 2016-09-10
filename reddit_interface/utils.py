@@ -419,7 +419,7 @@ def generate_flair_comment(s1, s2, s3):
 It looks like you haven't assigned a category flair to your question, so it has been automatically removed.
 You can assign a category flair to your question by clicking the *flair* button under it.
 
-Shortly after you have assigned a category flair to your question, it will be automatically re-approved and
+Shortly after you have assigned a category flair to your question, it will be **automatically re-approved** and
  this message
 will be deleted.
 
