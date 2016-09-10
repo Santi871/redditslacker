@@ -407,6 +407,7 @@ class UnflairedSubmission:
         else:
             return False
 
+
 def generate_flair_comment(s1, s2, s3):
     comment = ("""Hi /u/%s,
 
