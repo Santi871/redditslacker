@@ -490,9 +490,13 @@ class RedditBot:
 
                     if submission.author.name.lower() in tracked_users and submission.id not in self.already_done:
                         response = utils.SlackResponse(text="New submission by user /u/" + submission.author.name)
-                        
-                        response.add_attachment(title=submission.title, title_link=submission.permalink,
-                                                text=submission.body, color="#warning")
+
+                        try:
+                            response.add_attachment(title=submission.title, title_link=submission.permalink,
+                                                    text=submission.body, color="#warning")
+                        except AttributeError:
+                            response.add_attachment(title=submission.title, title_link=submission.permalink,
+                                                    color="#warning")
 
                         response.post_to_channel(token=self.config.bot_user_token, channel='#rs_feed')
                         self.already_done.append(submission.id)
