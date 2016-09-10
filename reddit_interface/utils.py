@@ -384,7 +384,9 @@ class UnflairedSubmission:
         else:
             for comment in comments:
                 body = comment.body.split()
+                print(body[0])
                 if body[0] in self.flairs and comment.author.name == self.submission.author.name:
+                    print("in")
                     flair = comment.body[0].upper() + comment.body[1:].lower()
                     comment.remove()
                     self.r.set_flair(self.sub, self.submission, flair, flair)
