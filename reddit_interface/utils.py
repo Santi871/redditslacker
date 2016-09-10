@@ -367,9 +367,8 @@ class UnflairedSubmission:
         self.submission.remove()
         s1 = self.submission.author.name
         s2 = 'https://www.reddit.com/message/compose/?to=/r/' + self.sub
-        s3 = self.submission.permalink
 
-        comment = generate_flair_comment(s1, s2, s3)
+        comment = generate_flair_comment(s1, s2)
 
         self.comment = self.submission.add_comment(comment)
         self.comment.distinguish(sticky=True)
@@ -413,7 +412,7 @@ class UnflairedSubmission:
             return False
 
 
-def generate_flair_comment(s1, s2, s3):
+def generate_flair_comment(s1, s2):
     comment = ("""Hi /u/%s,
 
 It looks like you haven't assigned a category flair to your question, so it has been automatically removed.
@@ -434,7 +433,7 @@ in the sidebar. (Example: if you want the Biology flair, reply to this message w
 
 *I am a bot, and this action was performed automatically.
 Please [contact the moderators](%s) if you have any questions or concerns*
-""") % (s1, s3, s2)
+""") % (s1, s2)
 
     return comment
 
