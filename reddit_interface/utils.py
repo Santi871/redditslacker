@@ -422,7 +422,7 @@ Shortly after you have assigned a category flair to your question, it will be **
  this message
 will be deleted.
 
-**How to flair your question:**:
+**How to flair your question:**
 
 * Click the flair button under your question and pick a category from the list (if you are on desktop).
 
