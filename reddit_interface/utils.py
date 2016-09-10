@@ -423,10 +423,12 @@ Shortly after you have assigned a category flair to your question, it will be au
  this message
 will be deleted.
 
-**Mobile users:** some reddit apps don't support flair selection (including the official one). In order to
- flair your
-question, open it in your phone's web browser by clicking [this link](%s) and select
-flair as you would in a desktop computer.
+**How to flair your question:**:
+
+* Click the flair button under your question and pick a category from the list (if you are on desktop).
+
+* If you are not on desktop, reply to this message with the flair you want. You can see the list of available flairs
+in the sidebar. (Example: if you want the Biology flair, reply to this message with "biology").
 
 ---
 
