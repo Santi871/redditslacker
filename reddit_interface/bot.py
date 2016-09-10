@@ -502,49 +502,23 @@ class RedditBot:
 
                     if submission.created > highest_timestamp.timestamp() and \
                                     submission.link_flair_text is None:
-                        submission.remove()
 
-                        s1 = submission.author
-                        s2 = 'https://www.reddit.com/message/compose/?to=/r/' + self.subreddit_name
-                        s3 = submission.permalink
-
-                        comment = utils.generate_flair_comment(s1, s2, s3)
-
-                        comment_obj = submission.add_comment(comment)
-                        comment_obj.distinguish(sticky=True)
-
-                        unflaired_submission = utils.UnflairedSubmission(submission, comment_obj)
-
+                        unflaired_submission = utils.UnflairedSubmission(r, submission, self.db, self.subreddit_name)
+                        unflaired_submission.remove_and_comment()
                         unflaired_submissions.append(unflaired_submission)
-
-                        self.db.log_unflaired_submission(submission.id, comment_obj.id)
 
                 for unflaired_submission_obj in unflaired_submissions:
 
-                    submission = unflaired_submission_obj.submission
-                    submission = r.get_submission(submission_id=submission.id)
-                    comment = unflaired_submission_obj.comment
+                    is_flaired = unflaired_submission_obj.check_if_flaired()
 
-                    if submission.link_flair_text is not None:
-                        submission.approve()
-
-                        for report in submission.mod_reports:
-                            submission.report(report[0])
-                            print(str(report))
-
-                        comment.delete()
+                    if is_flaired:
+                        unflaired_submission_obj.approve()
                         unflaired_submissions.remove(unflaired_submission_obj)
-                        self.db.delete_unflaired_submissions_row(submission.id)
+
                     else:
-
-                        submission_time = datetime.datetime.fromtimestamp(submission.created)
-                        d = datetime.datetime.now() - submission_time
-                        delta_time = d.total_seconds()
-
-                        if delta_time >= 13600:
+                        deleted = unflaired_submission_obj.delete_if_overtime()
+                        if deleted:
                             unflaired_submissions.remove(unflaired_submission_obj)
-                            comment.delete()
-                            self.db.delete_unflaired_submissions_row(submission.id)
 
             except (requests.exceptions.HTTPError, praw.errors.HTTPException):
                 sleep(2)

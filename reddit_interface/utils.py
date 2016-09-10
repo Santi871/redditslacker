@@ -1,6 +1,7 @@
 import json
 import requests
 import configparser
+import datetime
 
 
 def get_token(token_name, config_name='tokens.ini'):
@@ -344,10 +345,56 @@ def grab_attachment_args(original_message):
 
 class UnflairedSubmission:
 
-    def __init__(self, submission, comment):
+    def __init__(self, r, submission, db, sub):
+        self.r = r
         self.submission = submission
-        self.comment = comment
+        self.db = db
+        self.comment = None
+        self.sub = sub
 
+        try:
+            self.report = submission.mod_reports[0][0]
+        except IndexError:
+            self.report = None
+
+    def remove_and_comment(self):
+        self.submission.remove()
+        s1 = self.submission.author
+        s2 = 'https://www.reddit.com/message/compose/?to=/r/' + self.sub
+        s3 = self.submission.permalink
+
+        comment = generate_flair_comment(s1, s2, s3)
+
+        self.comment = self.submission.add_comment(comment)
+        self.comment.distinguish(sticky=True)
+        self.db.log_unflaired_submission(self.submission.id, self.comment.id)
+
+    def check_if_flaired(self):
+        self.submission = self.r.get_submission(submission_id=self.submission.id)
+        if self.submission.link_flair_text is not None:
+            return True
+        else:
+            return False
+
+    def approve(self):
+        self.submission.approve()
+        if self.report is not None:
+            self.submission.report(self.report)
+
+        self.comment.delete()
+        self.db.delete_unflaired_submissions_row(self.submission.id)
+
+    def delete_if_overtime(self):
+        submission_time = datetime.datetime.fromtimestamp(self.submission.created)
+        d = datetime.datetime.now() - submission_time
+        delta_time = d.total_seconds()
+
+        if delta_time >= 13600:
+            self.comment.delete()
+            self.db.delete_unflaired_submissions_row(self.submission.id)
+            return True
+        else:
+            return False
 
 def generate_flair_comment(s1, s2, s3):
     comment = ("""Hi /u/%s,
