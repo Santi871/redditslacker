@@ -376,10 +376,10 @@ class UnflairedSubmission:
         self.db.log_unflaired_submission(self.submission.id, self.comment.id)
 
     def check_if_flaired(self):
+        self.submission = self.r.get_submission(submission_id=self.submission.id)
         self.submission.replace_more_comments(limit=None)
         comments = praw.helpers.flatten_tree(self.submission.comments)
 
-        self.submission = self.r.get_submission(submission_id=self.submission.id)
         if self.submission.link_flair_text is not None:
             return True
         else:
