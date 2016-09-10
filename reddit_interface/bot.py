@@ -40,7 +40,7 @@ class RedditBot:
         self.usergroup_mod = ('santi871', 'akuthia', 'mason11987', 'mike_pants', 'mjcapples', 'securethruobscure',
                               'snewzie', 'teaearlgraycold', 'thom.willard', 'yarr', 'cow_co', 'sterlingphoenix',
                               'hugepilchard', 'curmudgy', 'h2g2_researcher', 'jim777ps3', 'letstrythisagain_',
-                              'mr_magnus', 'terrorpaw', 'kodack10', 'doc_daneeka')
+                              'mr_magnus', 'terrorpaw', 'kodack10', 'doc_daneeka', 'heliopteryx')
 
         self.already_done = self.fetch_already_done("already_done.txt")
 
@@ -805,17 +805,15 @@ class RedditBot:
     def shadowban(self, username, request, author):
 
         r = self.r
+        response = utils.SlackResponse(text="User */u/%s* has been shadowbanned." % username)
 
         try:
             user = self.r.get_redditor(username, fetch=True)
+            username = user.name
         except praw.errors.NotFound:
-            response = utils.SlackResponse()
-            response.add_attachment(fallback="Shadowban error.", title="Error: user not found.", color='danger')
-            return request.delayed_response(response)
+            response.add_attachment(fallback="Shadowban warning.", title="Warning: user not found.", color='warning')
 
-        username = user.name
-
-        if author in self.usergroup_mod:
+        if author.lower() in self.usergroup_mod:
             
             wiki_page = r.get_wiki_page(self.subreddit_name, "config/automoderator")
             wiki_page_content = wiki_page.content_md
@@ -841,13 +839,12 @@ class RedditBot:
 
                     self.un.add_note(n)
 
-                response = utils.SlackResponse(text="User */u/%s* has been shadowbanned." % username)
                 response.add_attachment(fallback="Shadowbanned /u/" + username,
                                         title="User profile",
                                         title_link="https://www.reddit.com/user/" + username,
                                         color='good')
 
-                response.attachments[0].add_field("Author", author)
+                response.attachments[len(response.attachments) - 1].add_field("Author", author)
 
             except AssertionError:
                 raise
@@ -857,8 +854,12 @@ class RedditBot:
                                         title="Exception",
                                         text=traceback.format_exc(),
                                         color='danger')
+        else:
+            response = utils.SlackResponse()
+            response.add_attachment(fallback="Shadowban error.",
+                                    title="Error: you are not authorized to perform this action.", color='danger')
 
-            request.delayed_response(response)
+        request.delayed_response(response)
 
     @bot_threading.own_thread()
     def unshadowban(self, username, request, author):
