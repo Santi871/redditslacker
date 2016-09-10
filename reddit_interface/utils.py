@@ -346,14 +346,17 @@ def grab_attachment_args(original_message):
 
 class UnflairedSubmission:
 
-    def __init__(self, r, submission, db, sub):
+    def __init__(self, r, submission, db, sub, comment=None):
         self.r = r
         self.submission = submission
         self.db = db
-        self.comment = None
+        self.comment = comment
         self.sub = sub
         self.flairs = ("biology", "technology", "culture", "other", "chemistry", "physics", "engineering",
                        "mathematics", "economics")
+
+        if comment is not None:
+            self.comment = r.get_info(thing_id="t1_" + comment)
 
         try:
             self.report = submission.mod_reports[0][0]

@@ -475,7 +475,7 @@ class RedditBot:
     def handle_unflaired(self, r, o):
         print("Starting handle_unflaired thread...")
 
-        unflaired_submissions = self.db.fetch_unflaired_submissions(r)
+        unflaired_submissions = self.db.fetch_unflaired_submissions(r, self.subreddit_name)
         tracked_users = [track[1].lower() for track in self.db.fetch_tracks("tracked")]
 
         while True:

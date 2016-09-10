@@ -315,7 +315,7 @@ class RedditSlackerDatabase:
         cur.execute('''INSERT INTO UNFLAIRED_SUBMISSIONS(SUBMISSION_ID, COMMENT_ID) VALUES (?,?)''', (submission_id,
                                                                                                       comment_id))
 
-    def fetch_unflaired_submissions(self, r):
+    def fetch_unflaired_submissions(self, r, subreddit):
 
         cur = self.db.cursor()
         cur.execute('''SELECT * FROM UNFLAIRED_SUBMISSIONS''')
@@ -329,7 +329,7 @@ class RedditSlackerDatabase:
             if submission.banned_by is not None:
                 r._use_oauth = False
                 comment = r.get_info(thing_id="t1_" + row[2])
-                unflaired_submission_obj = utils.UnflairedSubmission(submission, comment)
+                unflaired_submission_obj = utils.UnflairedSubmission(r, submission, self, subreddit, comment=comment)
                 unflaired_submissions.append(unflaired_submission_obj)
 
         return unflaired_submissions
