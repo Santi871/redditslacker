@@ -432,7 +432,10 @@ class RedditBot:
                         modmails[message.id] = utils.SlackModmail(message, self.config.bot_user_token, "C208X7WR0")
 
                         for reply in message.replies:
-                            modmails[message.id].add_reply(reply)
+                            try:
+                                modmails[message.id].add_reply(reply)
+                            except ValueError:
+                                pass
                             with open("already_done.txt", "a") as text_file:
                                 print(reply.id + ",", end="", file=text_file)
                             self.already_done.append(reply.id)
