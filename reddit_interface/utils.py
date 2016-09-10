@@ -365,7 +365,7 @@ class UnflairedSubmission:
 
     def remove_and_comment(self):
         self.submission.remove()
-        s1 = self.submission.author
+        s1 = self.submission.author.name
         s2 = 'https://www.reddit.com/message/compose/?to=/r/' + self.sub
         s3 = self.submission.permalink
 
