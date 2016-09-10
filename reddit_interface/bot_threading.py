@@ -2,7 +2,8 @@ import threading
 import traceback
 from time import sleep
 import requests.exceptions
-import praw.errors
+import praw
+import OAuth2Util
 
 
 class CreateThread(threading.Thread):
@@ -15,14 +16,10 @@ class CreateThread(threading.Thread):
         self.kwargs = kwargs
 
     def run(self):
-
         # This loop will run when the thread raises an exception
         while True:
             try:
-                if self.kwargs is not None:
-                    methodToRun = self.method(self.obj, self.kwargs)
-                else:
-                    methodToRun = self.method(self.obj)
+                methodToRun = self.method(self.obj, **self.kwargs)
                 break
             except AssertionError:
                 print("------------\nRan into an assertion error\nTrying again\n------------")
@@ -36,18 +33,36 @@ class CreateThread(threading.Thread):
                 print("*Unhandled exception"
                       " in thread* '%s'." % self.name)
                 print(traceback.format_exc())
-                sleep(60)
+                sleep(10)
 
 
-def own_thread(func):
-    def wrapped_f(*args, **kwargs):
-        # Create a thread with the method we called
-        if not kwargs:
-            kwargs = None
+def own_thread(dedicated=False):
 
-        thread = CreateThread(1, str(func) + " thread", args[0], func, kwargs)
-        thread.start()
+    def inner_f(func):
+        def wrapped_f(*args, **kwargs):
+            # Create a thread with the method we called
+            if not kwargs:
+                kwargs = None
 
-    return wrapped_f
+            if not dedicated:
+                thread = CreateThread(1, str(func) + " thread", args[0], func, kwargs)
+                thread.start()
+            else:
+                handler = praw.handlers.MultiprocessHandler()
+                r = praw.Reddit(user_agent="windows:RedditSlacker 0.3 by /u/santi871", handler=handler)
+                o = OAuth2Util.OAuth2Util(r)
+                r.config.api_request_delay = 1
+
+                if kwargs is not None:
+                    kwargs['r'] = r
+                    kwargs['o'] = o
+                else:
+                    kwargs = {'r': r, 'o': o}
+
+                thread = CreateThread(1, str(func) + " thread", args[0], func, kwargs)
+                thread.start()
+
+        return wrapped_f
+    return inner_f
 
 
