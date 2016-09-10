@@ -2,6 +2,7 @@ import json
 import requests
 import configparser
 import datetime
+import praw.helpers
 
 
 def get_token(token_name, config_name='tokens.ini'):
@@ -351,6 +352,8 @@ class UnflairedSubmission:
         self.db = db
         self.comment = None
         self.sub = sub
+        self.flairs = ("biology", "technology", "culture", "other", "chemistry", "physics", "engineering",
+                       "mathematics", "economics")
 
         try:
             self.report = submission.mod_reports[0][0]
@@ -370,11 +373,17 @@ class UnflairedSubmission:
         self.db.log_unflaired_submission(self.submission.id, self.comment.id)
 
     def check_if_flaired(self):
+        self.submission.replace_more_comments(limit=None)
+        comments = praw.helpers.flatten_tree(self.submission.comments)
+
         self.submission = self.r.get_submission(submission_id=self.submission.id)
         if self.submission.link_flair_text is not None:
             return True
         else:
-            return False
+            for comment in comments:
+                if comment.body.lower() in self.flairs and comment.author.name == self.submission.author.name:
+                    return True
+        return False
 
     def approve(self):
         self.submission.approve()
