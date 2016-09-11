@@ -539,8 +539,9 @@ class RedditBot:
 
         return redditor.link_karma + redditor.comment_karma, date
 
-    @bot_threading.own_thread()
-    def summary(self, username, request, no_summary=False, replace_original=False):
+    @bot_threading.own_thread(dedicated=True)
+    def summary(self, r, o, username, request, no_summary=False, replace_original=False):
+        o.refresh()
 
         if no_summary == "quick":
             no_summary = True
@@ -548,7 +549,7 @@ class RedditBot:
             no_summary = False
 
         try:
-            user = self.r.get_redditor(username, fetch=True)
+            user = r.get_redditor(username, fetch=True)
         except praw.errors.NotFound:
             response = utils.SlackResponse()
             response.add_attachment(fallback="Summary error.", title="Error: user not found.", color='danger')
