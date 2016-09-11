@@ -668,9 +668,9 @@ class RedditBot:
 
             total_comments_read = i
 
-            if not total_comments_read:
+            if total_comments_read < 3:
                 response.add_attachment(fallback="Summary for /u/" + username,
-                                        text="Summary error: user has no comments.",
+                                        text="Summary error: doesn't have enough comments.",
                                         color='danger')
 
                 return request.delayed_response(response)
