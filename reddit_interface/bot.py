@@ -516,7 +516,12 @@ class RedditBot:
 
                 for unflaired_submission_obj in unflaired_submissions:
 
-                    is_flaired = unflaired_submission_obj.check_if_flaired()
+                    try:
+                        is_flaired = unflaired_submission_obj.check_if_flaired()
+                    except AttributeError:
+                        unflaired_submissions.remove(unflaired_submission_obj)
+                        self.db.delete_unflaired_submissions_row(unflaired_submission_obj.submission.id)
+                        continue
 
                     if is_flaired:
                         unflaired_submission_obj.approve()
