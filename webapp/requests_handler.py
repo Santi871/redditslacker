@@ -110,8 +110,10 @@ class RequestsHandler:
                 ban_note, ban_date = self.bots[sub].db.get_ban_note(args[0])
 
                 if ban_note is not None and ban_note != "":
-                    response = utils.SlackResponse(text="Found a ban:")
-                    response.add_attachment(color='good')
+                    response = utils.SlackResponse()
+                    response.add_attachment(title="Found a ban for user /u/" + args[0],
+                                            title_link="https://reddit.com/u/" + args[0],
+                                            color='good')
                     response.attachments[0].add_field("Note", ban_note, short=False)
                     response.attachments[0].add_field("Issued", ban_date)
                 elif ban_note == "":
